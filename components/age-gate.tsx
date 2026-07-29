@@ -39,9 +39,9 @@ export function AgeGate() {
       role="dialog"
       aria-modal="true"
       aria-labelledby="age-gate-title"
-      className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/60 backdrop-blur-sm sm:items-center sm:p-6"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm sm:items-center sm:p-6"
     >
-      <div className="w-full max-w-sm rounded-t-3xl border border-border bg-surface p-6 shadow-xl sm:rounded-3xl">
+      <div className="w-full max-w-sm rounded-t-3xl border border-border bg-surface p-6 shadow-[0_0_60px_-15px_rgba(139,92,246,0.35)] sm:rounded-3xl">
         <div className="flex h-11 w-11 items-center justify-center rounded-full bg-accent-soft text-accent-strong">
           <ShieldCheckIcon className="h-5 w-5" />
         </div>
@@ -68,7 +68,7 @@ export function AgeGate() {
           type="button"
           onClick={handleConfirm}
           disabled={!checked}
-          className="mt-4 w-full rounded-full bg-accent-strong px-5 py-3 text-sm font-medium text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40 enabled:hover:opacity-90"
+          className="bg-gradient-accent mt-4 w-full rounded-full px-5 py-3 text-sm font-medium text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40 enabled:hover:opacity-90"
         >
           Confirmer et continuer
         </button>

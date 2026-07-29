@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Inter } from "next/font/google";
+import { Space_Grotesk, Inter } from "next/font/google";
 import { AgeGate } from "@/components/age-gate";
 import { PwaRegister } from "@/components/pwa-register";
 import { APP_NAME } from "@/lib/navigation";
@@ -10,11 +10,10 @@ const bodyFont = Inter({
   subsets: ["latin"],
 });
 
-const headingFont = Fraunces({
+const headingFont = Space_Grotesk({
   variable: "--font-heading",
   subsets: ["latin"],
-  weight: ["500", "600"],
-  style: ["normal", "italic"],
+  weight: ["500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -24,7 +23,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
+    statusBarStyle: "black-translucent",
     title: APP_NAME,
   },
   icons: {
@@ -36,7 +35,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#1a1817",
+  themeColor: "#0a0a0f",
 };
 
 export default function RootLayout({
@@ -45,7 +44,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className={`${bodyFont.variable} ${headingFont.variable} h-full antialiased`}>
+    <html lang="fr" className={`${bodyFont.variable} ${headingFont.variable} h-full antialiased dark`}>
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <PwaRegister />
         <AgeGate />

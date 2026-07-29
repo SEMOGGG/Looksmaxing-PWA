@@ -64,16 +64,25 @@ export default function LandingPage() {
   return (
     <>
       <SiteHeader />
-      <main className="flex-1">
+      <main className="flex-1 overflow-x-clip">
         {/* Hero */}
-        <section className="mx-auto w-full max-w-5xl px-5 pt-14 pb-16 sm:pt-20 sm:pb-24">
-          <div className="mx-auto max-w-2xl text-center">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-muted">
+        <section className="relative px-5 pt-14 pb-16 sm:pt-20 sm:pb-24">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -top-24 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-accent opacity-25 blur-[100px] sm:h-[28rem] sm:w-[28rem]"
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute top-10 right-0 h-64 w-64 rounded-full bg-accent-2 opacity-20 blur-[100px]"
+          />
+
+          <div className="relative mx-auto max-w-2xl text-center">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface/80 px-3 py-1 text-xs font-medium text-muted backdrop-blur">
               Coaching apparence &amp; bien-être
             </span>
-            <h1 className="font-heading mt-5 text-4xl font-medium leading-tight tracking-tight text-foreground sm:text-5xl">
+            <h1 className="font-heading mt-5 text-4xl font-semibold leading-tight tracking-tight text-foreground sm:text-6xl">
               Révélez le meilleur de vous-même,{" "}
-              <span className="italic text-accent-strong">à votre rythme</span>
+              <span className="text-gradient">à votre rythme</span>
             </h1>
             <p className="mt-5 text-base leading-relaxed text-muted sm:text-lg">
               {APP_NAME} vous accompagne avec bienveillance : analyse claire de votre
@@ -84,7 +93,7 @@ export default function LandingPage() {
             <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
               <Link
                 href="/onboarding"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-accent-strong px-6 py-3.5 text-sm font-medium text-white transition-opacity hover:opacity-90 sm:w-auto"
+                className="glow bg-gradient-accent inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3.5 text-sm font-semibold text-white transition-transform hover:scale-[1.02] sm:w-auto"
               >
                 Commencer
                 <ArrowRightIcon className="h-4 w-4" />
@@ -100,7 +109,7 @@ export default function LandingPage() {
         <section className="border-t border-border bg-surface-muted">
           <div className="mx-auto w-full max-w-5xl px-5 py-16 sm:py-20">
             <div className="mx-auto max-w-xl text-center">
-              <h2 className="font-heading text-2xl font-medium text-foreground sm:text-3xl">
+              <h2 className="font-heading text-2xl font-semibold text-foreground sm:text-3xl">
                 Un accompagnement complet, pensé pour vous
               </h2>
               <p className="mt-3 text-sm leading-relaxed text-muted sm:text-base">
@@ -113,12 +122,12 @@ export default function LandingPage() {
               {benefits.map((benefit) => (
                 <div
                   key={benefit.title}
-                  className="rounded-2xl border border-border bg-surface p-5"
+                  className="group rounded-2xl border border-border bg-surface p-5 transition-colors hover:border-accent/50"
                 >
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-soft text-accent-strong">
                     <benefit.icon className="h-5 w-5" />
                   </div>
-                  <h3 className="mt-4 text-base font-medium text-foreground">
+                  <h3 className="mt-4 text-base font-semibold text-foreground">
                     {benefit.title}
                   </h3>
                   <p className="mt-1.5 text-sm leading-relaxed text-muted">
@@ -133,7 +142,7 @@ export default function LandingPage() {
         {/* Comment ça marche */}
         <section className="mx-auto w-full max-w-5xl px-5 py-16 sm:py-20">
           <div className="mx-auto max-w-xl text-center">
-            <h2 className="font-heading text-2xl font-medium text-foreground sm:text-3xl">
+            <h2 className="font-heading text-2xl font-semibold text-foreground sm:text-3xl">
               Comment ça marche
             </h2>
           </div>
@@ -144,11 +153,11 @@ export default function LandingPage() {
                 key={step.number}
                 className="flex gap-4 rounded-2xl border border-border bg-surface p-5"
               >
-                <span className="font-heading shrink-0 text-2xl font-medium text-accent">
+                <span className="text-gradient font-heading shrink-0 text-2xl font-semibold">
                   {step.number}
                 </span>
                 <div>
-                  <h3 className="text-base font-medium text-foreground">{step.title}</h3>
+                  <h3 className="text-base font-semibold text-foreground">{step.title}</h3>
                   <p className="mt-1.5 text-sm leading-relaxed text-muted">
                     {step.description}
                   </p>
@@ -166,7 +175,7 @@ export default function LandingPage() {
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-soft text-accent-strong">
                   <LockIcon className="h-5 w-5" />
                 </div>
-                <h2 className="font-heading mt-4 text-2xl font-medium text-foreground sm:text-3xl">
+                <h2 className="font-heading mt-4 text-2xl font-semibold text-foreground sm:text-3xl">
                   Vos données et vos photos vous appartiennent
                 </h2>
                 <p className="mt-3 text-sm leading-relaxed text-muted sm:text-base">
@@ -203,17 +212,17 @@ export default function LandingPage() {
 
         {/* CTA final */}
         <section className="mx-auto w-full max-w-5xl px-5 py-16 sm:py-20">
-          <div className="rounded-3xl border border-border bg-foreground px-6 py-12 text-center sm:px-12">
-            <h2 className="font-heading text-2xl font-medium text-background sm:text-3xl">
+          <div className="bg-gradient-accent glow relative overflow-hidden rounded-3xl px-6 py-12 text-center sm:px-12">
+            <h2 className="font-heading text-2xl font-semibold text-white sm:text-3xl">
               Prêt·e à prendre soin de vous, sans pression ?
             </h2>
-            <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-background/70 sm:text-base">
+            <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-white/80 sm:text-base">
               Créez votre profil en quelques minutes et recevez votre premier bilan
               personnalisé.
             </p>
             <Link
               href="/onboarding"
-              className="mt-7 inline-flex items-center justify-center gap-2 rounded-full bg-background px-6 py-3.5 text-sm font-medium text-foreground transition-opacity hover:opacity-90"
+              className="mt-7 inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3.5 text-sm font-semibold text-[#0a0a0f] transition-transform hover:scale-[1.02]"
             >
               Commencer gratuitement
               <ArrowRightIcon className="h-4 w-4" />

@@ -3,8 +3,8 @@
 import { deflateSync } from "node:zlib";
 import { writeFileSync, mkdirSync } from "node:fs";
 
-const BG = [26, 24, 22]; // #1A1817 - charcoal premium
-const FG = [196, 154, 91]; // #C49A5B - bronze doux
+const BG = [10, 10, 15]; // #0A0A0F - fond sombre de l'app
+const FG = [139, 92, 246]; // #8B5CF6 - violet accent
 
 function crc32(buf) {
   let c;
