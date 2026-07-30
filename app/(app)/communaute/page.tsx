@@ -2,26 +2,20 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useUser, SignInButton } from "@clerk/nextjs";
 import { AppTopBar } from "@/components/app-top-bar";
 import { ArticleCard } from "@/components/community/article-card";
 import { PostCard } from "@/components/community/post-card";
 import { PostComposer } from "@/components/community/post-composer";
 import { LockIcon, ShieldCheckIcon } from "@/components/icons";
-import {
-  articles,
-  categoryLabels,
-  addPost,
-  addComment,
-  toggleLike,
-  loadPosts,
-  type ArticleCategory,
-  type Post,
-} from "@/lib/community";
+import { articles, categoryLabels, type ArticleCategory, type Post } from "@/lib/community";
 import { loadPlan, type Plan } from "@/lib/subscription-store";
+import { getPosts, createPost, createComment, toggleLike, reportPost } from "./actions";
 
 const categories = Object.keys(categoryLabels) as ArticleCategory[];
 
 export default function CommunautePage() {
+  const { isSignedIn } = useUser();
   const [tab, setTab] = useState<"articles" | "discussions">("articles");
   const [category, setCategory] = useState<ArticleCategory | "tous">("tous");
   const [posts, setPosts] = useState<Post[]>([]);
@@ -29,29 +23,44 @@ export default function CommunautePage() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    setPosts(loadPosts());
     setPlan(loadPlan());
-    setReady(true);
+    getPosts()
+      .then(setPosts)
+      .finally(() => setReady(true));
   }, []);
 
   if (!ready) return null;
 
   const isPremium = plan === "premium";
+  const canParticipate = isPremium && Boolean(isSignedIn);
   const filteredArticles =
     category === "tous" ? articles : articles.filter((a) => a.category === category);
   const filteredPosts =
     category === "tous" ? posts : posts.filter((p) => p.category === category);
 
-  function handleNewPost(content: string, postCategory: ArticleCategory) {
-    setPosts(addPost({ author: "Vous", category: postCategory, content }));
+  async function handleNewPost(content: string, postCategory: ArticleCategory) {
+    const result = await createPost(content, postCategory);
+    if (!result.ok) return result.error;
+    setPosts(result.posts);
+    return null;
   }
 
-  function handleComment(postId: string, content: string) {
-    setPosts(addComment(postId, { author: "Vous", content }));
+  async function handleComment(postId: string, content: string) {
+    const result = await createComment(postId, content);
+    if (!result.ok) return result.error;
+    setPosts(result.posts);
+    return null;
   }
 
   function handleLike(postId: string, liked: boolean) {
-    setPosts(toggleLike(postId, liked));
+    toggleLike(postId, liked).then((result) => {
+      if (result.ok) setPosts(result.posts);
+    });
+  }
+
+  async function handleReport(postId: string) {
+    const result = await reportPost(postId);
+    return result.ok ? null : result.error;
   }
 
   return (
@@ -126,7 +135,28 @@ export default function CommunautePage() {
             </div>
 
             {isPremium ? (
-              <PostComposer onSubmit={handleNewPost} />
+              isSignedIn ? (
+                <PostComposer onSubmit={handleNewPost} />
+              ) : (
+                <div className="flex items-center gap-3 rounded-2xl border border-dashed border-border bg-surface p-5">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-muted text-muted">
+                    <LockIcon className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted">
+                      Connectez-vous pour publier et commenter dans la communauté.
+                    </p>
+                    <SignInButton mode="modal">
+                      <button
+                        type="button"
+                        className="bg-gradient-accent mt-2 rounded-full px-4 py-2 text-xs font-semibold text-white"
+                      >
+                        Se connecter
+                      </button>
+                    </SignInButton>
+                  </div>
+                </div>
+              )
             ) : (
               <div className="flex items-center gap-3 rounded-2xl border border-dashed border-border bg-surface p-5">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-muted text-muted">
@@ -149,9 +179,10 @@ export default function CommunautePage() {
               <PostCard
                 key={post.id}
                 post={post}
-                canParticipate={isPremium}
+                canParticipate={canParticipate}
                 onLike={handleLike}
                 onComment={handleComment}
+                onReport={handleReport}
               />
             ))}
           </div>

@@ -10,17 +10,20 @@ export function PostCard({
   canParticipate,
   onLike,
   onComment,
+  onReport,
 }: {
   post: Post;
   canParticipate: boolean;
   onLike: (postId: string, liked: boolean) => void;
-  onComment: (postId: string, content: string) => void;
+  onComment: (postId: string, content: string) => Promise<string | null>;
+  onReport: (postId: string) => Promise<string | null>;
 }) {
   const [liked, setLiked] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [reported, setReported] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [reportState, setReportState] = useState<"idle" | "sent" | "error">("idle");
 
   function handleLike() {
     const next = !liked;
@@ -28,15 +31,26 @@ export function PostCard({
     onLike(post.id, next);
   }
 
-  function handleSubmitComment() {
-    const result = moderateContent(draft);
-    if (result.status === "flagged") {
-      setError(result.reason ?? "Message non autorisé.");
+  async function handleSubmitComment() {
+    const preCheck = moderateContent(draft);
+    if (preCheck.status === "flagged") {
+      setError(preCheck.reason ?? "Message non autorisé.");
       return;
     }
-    onComment(post.id, draft);
+    setSubmitting(true);
+    const result = await onComment(post.id, draft);
+    setSubmitting(false);
+    if (result) {
+      setError(result);
+      return;
+    }
     setDraft("");
     setError(null);
+  }
+
+  async function handleReport() {
+    const result = await onReport(post.id);
+    setReportState(result ? "error" : "sent");
   }
 
   return (
@@ -55,12 +69,12 @@ export function PostCard({
         </div>
         <button
           type="button"
-          onClick={() => setReported(true)}
-          disabled={reported}
+          onClick={handleReport}
+          disabled={reportState !== "idle"}
           className="flex items-center gap-1 text-xs text-muted transition-colors hover:text-danger disabled:text-accent-strong"
         >
           <FlagIcon className="h-3.5 w-3.5" />
-          {reported ? "Signalé" : "Signaler"}
+          {reportState === "sent" ? "Signalé" : reportState === "error" ? "Réessayer" : "Signaler"}
         </button>
       </div>
 
@@ -123,7 +137,7 @@ export function PostCard({
                 <button
                   type="button"
                   onClick={handleSubmitComment}
-                  disabled={!draft.trim()}
+                  disabled={!draft.trim() || submitting}
                   className="bg-gradient-accent rounded-full px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Envoyer

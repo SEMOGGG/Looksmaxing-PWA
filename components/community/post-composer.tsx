@@ -8,19 +8,26 @@ const categories = Object.keys(categoryLabels) as ArticleCategory[];
 export function PostComposer({
   onSubmit,
 }: {
-  onSubmit: (content: string, category: ArticleCategory) => void;
+  onSubmit: (content: string, category: ArticleCategory) => Promise<string | null>;
 }) {
   const [content, setContent] = useState("");
   const [category, setCategory] = useState<ArticleCategory>("general");
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  function handleSubmit() {
-    const result = moderateContent(content);
-    if (result.status === "flagged") {
-      setError(result.reason ?? "Message non autorisé.");
+  async function handleSubmit() {
+    const preCheck = moderateContent(content);
+    if (preCheck.status === "flagged") {
+      setError(preCheck.reason ?? "Message non autorisé.");
       return;
     }
-    onSubmit(content, category);
+    setSubmitting(true);
+    const result = await onSubmit(content, category);
+    setSubmitting(false);
+    if (result) {
+      setError(result);
+      return;
+    }
     setContent("");
     setError(null);
   }
@@ -53,10 +60,10 @@ export function PostComposer({
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={!content.trim()}
+          disabled={!content.trim() || submitting}
           className="bg-gradient-accent rounded-full px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Publier
+          {submitting ? "Publication…" : "Publier"}
         </button>
       </div>
       <p className="mt-3 text-xs text-muted">

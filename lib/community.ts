@@ -1,12 +1,10 @@
 // Espace communautaire : articles éditoriaux (contenu fixe, non modifiable
 // par les membres) + fil de discussion entre membres Premium.
 //
-// MVP actuel : les posts/commentaires créés par la personne qui teste
-// l'app sont persistés en localStorage sur son appareil (pas de backend
-// partagé). La modération est une vérification par liste de mots-clés,
-// volontairement simple : le point d'intégration d'une vraie modération
-// par IA (appel serveur à un modèle de langage) est indiqué plus bas dans
-// `moderateContent`.
+// Ce fichier ne contient que ce qui est sûr à utiliser aussi bien côté
+// client que serveur (types, contenu éditorial, modération). L'accès aux
+// données de la communauté (Supabase) vit dans
+// app/(app)/communaute/actions.ts, qui est un module serveur uniquement.
 
 export type ArticleCategory = "apparence" | "nutrition" | "cardio" | "style" | "general";
 
@@ -143,9 +141,19 @@ export type Post = {
   comments: Comment[];
 };
 
-const seedPosts: Post[] = [
+// Publications de démonstration insérées automatiquement dans Supabase la
+// première fois que la table community_posts est vide (voir seedIfEmpty
+// dans actions.ts), pour que la communauté ne démarre pas comme un espace
+// vide. Author_id volontairement distinct ("seed") pour rester identifiable.
+export const seedPosts: {
+  author: string;
+  category: ArticleCategory;
+  content: string;
+  createdAt: string;
+  likes: number;
+  comments: { author: string; content: string; createdAt: string }[];
+}[] = [
   {
-    id: "seed-1",
     author: "Camille",
     category: "cardio",
     content:
@@ -154,7 +162,6 @@ const seedPosts: Post[] = [
     likes: 14,
     comments: [
       {
-        id: "seed-1-c1",
         author: "Yanis",
         content: "Pareil ici, 2 mois de zone 2 et le sommeil s'est aussi amélioré, pas juste le cardio.",
         createdAt: "2026-07-24T10:03:00.000Z",
@@ -162,7 +169,6 @@ const seedPosts: Post[] = [
     ],
   },
   {
-    id: "seed-2",
     author: "Léa",
     category: "apparence",
     content:
@@ -172,7 +178,6 @@ const seedPosts: Post[] = [
     comments: [],
   },
   {
-    id: "seed-3",
     author: "Thomas",
     category: "nutrition",
     content:
@@ -181,7 +186,6 @@ const seedPosts: Post[] = [
     likes: 6,
     comments: [
       {
-        id: "seed-3-c1",
         author: "Sofia",
         content:
           "Un repas normal 1h30-2h avant, puis une petite collation protéinée juste après l'entraînement, ça m'a beaucoup aidé à ne plus tout manger d'un coup le soir.",
@@ -190,7 +194,6 @@ const seedPosts: Post[] = [
     ],
   },
   {
-    id: "seed-4",
     author: "Nora",
     category: "style",
     content:
@@ -200,70 +203,6 @@ const seedPosts: Post[] = [
     comments: [],
   },
 ];
-
-const STORAGE_KEY = "faciem_community_posts";
-
-export function loadPosts(): Post[] {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    const stored: Post[] = raw ? JSON.parse(raw) : [];
-    const storedIds = new Set(stored.map((p) => p.id));
-    return [...stored, ...seedPosts.filter((p) => !storedIds.has(p.id))].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-  } catch {
-    return [...seedPosts];
-  }
-}
-
-function savePosts(posts: Post[]) {
-  try {
-    const custom = posts.filter((p) => !p.id.startsWith("seed-"));
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(custom));
-  } catch {
-    // stockage indisponible : on ignore silencieusement
-  }
-}
-
-export function addPost(post: Omit<Post, "id" | "createdAt" | "likes" | "comments">): Post[] {
-  const posts = loadPosts();
-  const newPost: Post = {
-    ...post,
-    id: `local-${Date.now()}`,
-    createdAt: new Date().toISOString(),
-    likes: 0,
-    comments: [],
-  };
-  const next = [newPost, ...posts];
-  savePosts(next);
-  return next;
-}
-
-export function addComment(postId: string, comment: Omit<Comment, "id" | "createdAt">): Post[] {
-  const posts = loadPosts();
-  const next = posts.map((post) =>
-    post.id === postId
-      ? {
-          ...post,
-          comments: [
-            ...post.comments,
-            { ...comment, id: `local-c-${Date.now()}`, createdAt: new Date().toISOString() },
-          ],
-        }
-      : post
-  );
-  savePosts(next);
-  return next;
-}
-
-export function toggleLike(postId: string, liked: boolean): Post[] {
-  const posts = loadPosts();
-  const next = posts.map((post) =>
-    post.id === postId ? { ...post, likes: post.likes + (liked ? 1 : -1) } : post
-  );
-  savePosts(next);
-  return next;
-}
 
 // Liste volontairement courte et non exhaustive, à but de démonstration.
 // À remplacer par un vrai appel serveur à un modèle de modération

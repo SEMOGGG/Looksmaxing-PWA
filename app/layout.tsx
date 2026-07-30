@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Space_Grotesk, Inter } from "next/font/google";
+import { ClerkProvider } from "@clerk/nextjs";
 import { AgeGate } from "@/components/age-gate";
 import { GrainOverlay } from "@/components/grain-overlay";
 import { PwaRegister } from "@/components/pwa-register";
@@ -45,13 +46,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className={`${bodyFont.variable} ${headingFont.variable} h-full antialiased dark`}>
-      <body className="min-h-full flex flex-col bg-background text-foreground">
-        <PwaRegister />
-        <GrainOverlay />
-        <AgeGate />
-        {children}
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="fr" className={`${bodyFont.variable} ${headingFont.variable} h-full antialiased dark`}>
+        <body className="min-h-full flex flex-col bg-background text-foreground">
+          <PwaRegister />
+          <GrainOverlay />
+          <AgeGate />
+          {children}
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

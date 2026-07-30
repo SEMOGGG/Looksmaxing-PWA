@@ -57,6 +57,33 @@ create table if not exists community_reports (
 create index if not exists community_posts_status_idx on community_posts (moderation_status, created_at desc);
 create index if not exists community_comments_post_idx on community_comments (post_id, created_at asc);
 
+-- Le compteur likes_count est dérivé de community_likes via ce trigger,
+-- plutôt qu'incrémenté manuellement depuis l'application (évite tout
+-- décalage en cas d'écriture concurrente).
+create or replace function community_sync_likes_count()
+returns trigger as $$
+begin
+  if (tg_op = 'INSERT') then
+    update community_posts set likes_count = likes_count + 1 where id = new.post_id;
+    return new;
+  elsif (tg_op = 'DELETE') then
+    update community_posts set likes_count = greatest(likes_count - 1, 0) where id = old.post_id;
+    return old;
+  end if;
+  return null;
+end;
+$$ language plpgsql;
+
+drop trigger if exists community_likes_after_insert on community_likes;
+create trigger community_likes_after_insert
+  after insert on community_likes
+  for each row execute function community_sync_likes_count();
+
+drop trigger if exists community_likes_after_delete on community_likes;
+create trigger community_likes_after_delete
+  after delete on community_likes
+  for each row execute function community_sync_likes_count();
+
 -- RLS : toutes les écritures passent par les Route Handlers Next.js
 -- (côté serveur, avec la clé secrète), jamais directement depuis le
 -- navigateur. Les lectures publiques ne remontent que les contenus
