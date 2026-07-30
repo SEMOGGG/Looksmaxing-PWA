@@ -100,25 +100,6 @@ export const faceShapes: FaceShapeInfo[] = [
   },
 ];
 
-const FACE_SHAPE_KEY = "faciem_face_shape";
-
-export function loadFaceShape(): FaceShape | null {
-  try {
-    const stored = window.localStorage.getItem(FACE_SHAPE_KEY);
-    return (faceShapes.find((f) => f.value === stored)?.value as FaceShape) ?? null;
-  } catch {
-    return null;
-  }
-}
-
-export function saveFaceShape(shape: FaceShape) {
-  try {
-    window.localStorage.setItem(FACE_SHAPE_KEY, shape);
-  } catch {
-    // stockage indisponible : on ignore silencieusement
-  }
-}
-
 export const beardTrimSteps = [
   {
     title: "Peignez à sec avant de commencer",

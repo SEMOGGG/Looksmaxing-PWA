@@ -8,7 +8,7 @@ import { HealthDisclaimer } from "@/components/health-disclaimer";
 import { ScoreRing } from "@/components/score-ring";
 import { ArrowRightIcon, CheckIcon, SparklesIcon } from "@/components/icons";
 import { demoProfile, type Goal } from "@/lib/onboarding";
-import { loadProfile } from "@/lib/profile-store";
+import { getUserData } from "@/app/actions/user-data";
 import { generateAnalysis } from "@/lib/analysis";
 
 export default function AnalysePage() {
@@ -17,14 +17,15 @@ export default function AnalysePage() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const saved = loadProfile();
-    if (saved) {
-      setGoals(saved.goals);
-      setIsDemo(false);
-    } else {
-      setIsDemo(true);
-    }
-    setReady(true);
+    getUserData().then(({ profile }) => {
+      if (profile) {
+        setGoals(profile.goals);
+        setIsDemo(false);
+      } else {
+        setIsDemo(true);
+      }
+      setReady(true);
+    });
   }, []);
 
   if (!ready) return null;

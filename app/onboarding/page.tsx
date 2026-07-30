@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import { OnboardingHeader } from "@/components/onboarding/onboarding-header";
 import { StepActions } from "@/components/onboarding/step-actions";
 import { StepConsentPhoto } from "@/components/onboarding/step-consent-photo";
@@ -9,27 +10,38 @@ import { StepProfile } from "@/components/onboarding/step-profile";
 import { StepActivity } from "@/components/onboarding/step-activity";
 import { StepGoals } from "@/components/onboarding/step-goals";
 import { StepSummary } from "@/components/onboarding/step-summary";
+import { StepAccount } from "@/components/onboarding/step-account";
 import { initialOnboardingData, type OnboardingData } from "@/lib/onboarding";
-import { saveProfile } from "@/lib/profile-store";
+import { saveUserProfile } from "@/app/actions/user-data";
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 6;
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const { isSignedIn, isLoaded } = useUser();
   const [step, setStep] = useState(1);
   const [data, setData] = useState<OnboardingData>(initialOnboardingData);
+  const [saving, setSaving] = useState(false);
 
   function update(patch: Partial<OnboardingData>) {
     setData((prev) => ({ ...prev, ...patch }));
   }
 
+  // Dès que la dernière étape est atteinte et qu'un compte est actif
+  // (nouvellement créé ou déjà existant), on enregistre le profil et on
+  // continue — le composant StepAccount se charge seulement de proposer la
+  // connexion, pas d'en dépendre.
+  useEffect(() => {
+    if (step !== TOTAL_STEPS || !isLoaded || !isSignedIn || saving) return;
+    setSaving(true);
+    saveUserProfile(data).then(() => router.push("/analyse"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, isLoaded, isSignedIn]);
+
   function goNext() {
     if (step < TOTAL_STEPS) {
       setStep((s) => s + 1);
       window.scrollTo({ top: 0 });
-    } else {
-      saveProfile(data);
-      router.push("/analyse");
     }
   }
 
@@ -44,6 +56,7 @@ export default function OnboardingPage() {
     3: Boolean(data.activityLevel),
     4: data.goals.length > 0,
     5: true,
+    6: true,
   }[step];
 
   return (
@@ -56,15 +69,18 @@ export default function OnboardingPage() {
         {step === 3 && <StepActivity data={data} update={update} />}
         {step === 4 && <StepGoals data={data} update={update} />}
         {step === 5 && <StepSummary data={data} />}
+        {step === 6 && <StepAccount saving={saving} onBack={goBack} />}
       </main>
 
-      <StepActions
-        onBack={goBack}
-        onNext={goNext}
-        nextDisabled={!isStepValid}
-        showBack={step > 1}
-        nextLabel={step === TOTAL_STEPS ? "Voir mon bilan" : "Continuer"}
-      />
+      {step < TOTAL_STEPS && (
+        <StepActions
+          onBack={goBack}
+          onNext={goNext}
+          nextDisabled={!isStepValid}
+          showBack={step > 1}
+          nextLabel={step === TOTAL_STEPS - 1 ? "Créer mon compte" : "Continuer"}
+        />
+      )}
     </div>
   );
 }

@@ -105,3 +105,27 @@ create policy "Lecture publique des commentaires approuvés"
 -- ne sont possibles qu'avec la clé secrète (service role), utilisée
 -- uniquement dans les Route Handlers serveur, après vérification Clerk
 -- et modération du contenu.
+
+-- Profil utilisateur (onboarding + abonnement + forme de visage), une ligne
+-- par compte Clerk. Remplace le localStorage utilisé jusque-là : dès qu'un
+-- membre crée son compte à la fin de l'onboarding, ce profil est
+-- accessible depuis n'importe quel appareil où il se connecte.
+create table if not exists user_profiles (
+  user_id text primary key,               -- Clerk user id
+  plan text not null default 'free' check (plan in ('free', 'premium')),
+  consent_given boolean not null default false,
+  photo_data_url text,
+  age text,
+  sex text,
+  height_cm text,
+  weight_kg text,
+  activity_level text,
+  steps text,
+  goals text[] not null default '{}',
+  face_shape text,
+  updated_at timestamptz not null default now()
+);
+
+alter table user_profiles enable row level security;
+-- Aucune policy pour le rôle "anon" : cette table n'est lue/écrite que par
+-- les Server Actions (clé secrète), jamais directement depuis le navigateur.

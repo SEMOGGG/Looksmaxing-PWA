@@ -9,7 +9,8 @@ import { PostCard } from "@/components/community/post-card";
 import { PostComposer } from "@/components/community/post-composer";
 import { LockIcon, ShieldCheckIcon } from "@/components/icons";
 import { articles, categoryLabels, type ArticleCategory, type Post } from "@/lib/community";
-import { loadPlan, type Plan } from "@/lib/subscription-store";
+import type { Plan } from "@/lib/user-data";
+import { getUserData } from "@/app/actions/user-data";
 import { getPosts, createPost, createComment, toggleLike, reportPost } from "./actions";
 
 const categories = Object.keys(categoryLabels) as ArticleCategory[];
@@ -23,9 +24,11 @@ export default function CommunautePage() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    setPlan(loadPlan());
-    getPosts()
-      .then(setPosts)
+    Promise.all([getUserData(), getPosts()])
+      .then(([userData, loadedPosts]) => {
+        setPlan(userData.plan);
+        setPosts(loadedPosts);
+      })
       .finally(() => setReady(true));
   }, []);
 

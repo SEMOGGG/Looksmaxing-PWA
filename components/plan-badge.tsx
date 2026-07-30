@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { loadPlan } from "@/lib/subscription-store";
+import { getUserData } from "@/app/actions/user-data";
 
 // Rappel visuel persistant du plan actif, affiché dans l'en-tête de chaque
 // page connectée — pour que le passage en Premium se voie partout, pas
@@ -10,7 +10,7 @@ export function PlanBadge() {
   const [isPremium, setIsPremium] = useState(false);
 
   useEffect(() => {
-    setIsPremium(loadPlan() === "premium");
+    getUserData().then(({ plan }) => setIsPremium(plan === "premium"));
   }, []);
 
   if (!isPremium) return null;

@@ -4,15 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AppTopBar } from "@/components/app-top-bar";
 import { LockIcon } from "@/components/icons";
-import {
-  faceShapes,
-  beardTrimSteps,
-  haircutTips,
-  loadFaceShape,
-  saveFaceShape,
-  type FaceShape,
-} from "@/lib/hair";
-import { loadPlan, type Plan } from "@/lib/subscription-store";
+import { faceShapes, beardTrimSteps, haircutTips, type FaceShape } from "@/lib/hair";
+import { getUserData, saveFaceShapeData } from "@/app/actions/user-data";
+import type { Plan } from "@/lib/user-data";
 
 function StepList({ steps }: { steps: { title: string; why: string }[] }) {
   return (
@@ -38,14 +32,16 @@ export default function CheveuxBarbePage() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    setShape(loadFaceShape());
-    setPlan(loadPlan());
-    setReady(true);
+    getUserData().then(({ plan: userPlan, faceShape }) => {
+      setShape(faceShape);
+      setPlan(userPlan);
+      setReady(true);
+    });
   }, []);
 
   function handleSelect(value: FaceShape) {
     setShape(value);
-    saveFaceShape(value);
+    saveFaceShapeData(value);
   }
 
   if (!ready) return null;

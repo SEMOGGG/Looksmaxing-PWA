@@ -7,9 +7,9 @@ import { DemoProfileBanner } from "@/components/demo-profile-banner";
 import { HealthDisclaimer } from "@/components/health-disclaimer";
 import { LockIcon } from "@/components/icons";
 import { demoProfile, type OnboardingData } from "@/lib/onboarding";
-import { loadProfile, saveProfile } from "@/lib/profile-store";
+import { getUserData, saveUserProfile } from "@/app/actions/user-data";
 import { calculateTargets } from "@/lib/nutrition";
-import { loadPlan, type Plan } from "@/lib/subscription-store";
+import type { Plan } from "@/lib/user-data";
 
 const adjustmentCopy = {
   deficit: {
@@ -34,22 +34,23 @@ export default function NutritionPage() {
   const [plan, setPlan] = useState<Plan>("free");
 
   useEffect(() => {
-    const saved = loadProfile();
-    if (saved) {
-      setProfile(saved);
-      setSteps(saved.steps);
-      setIsDemo(false);
-    } else {
-      setSteps(demoProfile.steps);
-      setIsDemo(true);
-    }
-    setPlan(loadPlan());
-    setReady(true);
+    getUserData().then(({ profile: saved, plan: userPlan }) => {
+      if (saved) {
+        setProfile(saved);
+        setSteps(saved.steps);
+        setIsDemo(false);
+      } else {
+        setSteps(demoProfile.steps);
+        setIsDemo(true);
+      }
+      setPlan(userPlan);
+      setReady(true);
+    });
   }, []);
 
   function handleStepsChange(value: string) {
     setSteps(value);
-    if (!isDemo) saveProfile({ ...profile, steps: value });
+    if (!isDemo) saveUserProfile({ ...profile, steps: value });
   }
 
   if (!ready) return null;

@@ -6,9 +6,9 @@ import { DemoProfileBanner } from "@/components/demo-profile-banner";
 import { ProgressChart } from "@/components/progress-chart";
 import { CheckIcon, LockIcon } from "@/components/icons";
 import { demoProfile, type Goal } from "@/lib/onboarding";
-import { loadProfile } from "@/lib/profile-store";
+import { getUserData, saveUserPlan } from "@/app/actions/user-data";
 import { generateAnalysis } from "@/lib/analysis";
-import { loadPlan, savePlan, type Plan } from "@/lib/subscription-store";
+import type { Plan } from "@/lib/user-data";
 
 const pastEntries = [
   { label: "15 mai", date: "15 mai 2026", score: 64 },
@@ -39,20 +39,21 @@ export default function ComptePage() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const saved = loadProfile();
-    if (saved) {
-      setGoals(saved.goals);
-      setPhotoDataUrl(saved.photoDataUrl);
-      setIsDemo(false);
-    } else {
-      setIsDemo(true);
-    }
-    setPlan(loadPlan());
-    setReady(true);
+    getUserData().then(({ profile: saved, plan: userPlan }) => {
+      if (saved) {
+        setGoals(saved.goals);
+        setPhotoDataUrl(saved.photoDataUrl);
+        setIsDemo(false);
+      } else {
+        setIsDemo(true);
+      }
+      setPlan(userPlan);
+      setReady(true);
+    });
   }, []);
 
   function handlePlanChange(next: Plan) {
-    savePlan(next);
+    saveUserPlan(next);
     setPlan(next);
   }
 
