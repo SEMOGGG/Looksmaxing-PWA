@@ -44,6 +44,21 @@ export const initialOnboardingData: OnboardingData = {
   goals: [],
 };
 
+// Profil utilisé sur les pages d'analyse/nutrition/compte quand aucun
+// onboarding n'a encore été complété sur cet appareil, pour donner un aperçu
+// plutôt qu'un écran vide.
+export const demoProfile: OnboardingData = {
+  consentGiven: true,
+  photoDataUrl: null,
+  age: "24",
+  sex: "homme",
+  heightCm: "178",
+  weightKg: "74",
+  activityLevel: "modere",
+  steps: "7000",
+  goals: ["perte_de_gras", "amelioration_peau"],
+};
+
 export const sexOptions: { value: Sex; label: string }[] = [
   { value: "femme", label: "Femme" },
   { value: "homme", label: "Homme" },

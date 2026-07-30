@@ -10,6 +10,7 @@ import { StepActivity } from "@/components/onboarding/step-activity";
 import { StepGoals } from "@/components/onboarding/step-goals";
 import { StepSummary } from "@/components/onboarding/step-summary";
 import { initialOnboardingData, type OnboardingData } from "@/lib/onboarding";
+import { saveProfile } from "@/lib/profile-store";
 
 const TOTAL_STEPS = 5;
 
@@ -27,6 +28,7 @@ export default function OnboardingPage() {
       setStep((s) => s + 1);
       window.scrollTo({ top: 0 });
     } else {
+      saveProfile(data);
       router.push("/analyse");
     }
   }
