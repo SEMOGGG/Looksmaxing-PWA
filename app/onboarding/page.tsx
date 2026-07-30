@@ -13,6 +13,7 @@ import { StepSummary } from "@/components/onboarding/step-summary";
 import { StepAccount } from "@/components/onboarding/step-account";
 import { initialOnboardingData, type OnboardingData } from "@/lib/onboarding";
 import { saveUserProfile } from "@/app/actions/user-data";
+import { loadDraft, saveDraft, clearDraft } from "@/lib/onboarding-draft";
 
 const TOTAL_STEPS = 6;
 
@@ -22,6 +23,23 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(1);
   const [data, setData] = useState<OnboardingData>(initialOnboardingData);
   const [saving, setSaving] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  // L'étape de création de compte peut déclencher un rechargement de page
+  // (synchronisation de session Clerk) : on restaure la progression déjà
+  // saisie si elle a été interrompue par ce rechargement.
+  useEffect(() => {
+    const draft = loadDraft();
+    if (draft) {
+      setStep(draft.step);
+      setData(draft.data);
+    }
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (hydrated) saveDraft(step, data);
+  }, [step, data, hydrated]);
 
   function update(patch: Partial<OnboardingData>) {
     setData((prev) => ({ ...prev, ...patch }));
@@ -34,7 +52,10 @@ export default function OnboardingPage() {
   useEffect(() => {
     if (step !== TOTAL_STEPS || !isLoaded || !isSignedIn || saving) return;
     setSaving(true);
-    saveUserProfile(data).then(() => router.push("/analyse"));
+    saveUserProfile(data).then(() => {
+      clearDraft();
+      router.push("/analyse");
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, isLoaded, isSignedIn]);
 
@@ -58,6 +79,8 @@ export default function OnboardingPage() {
     5: true,
     6: true,
   }[step];
+
+  if (!hydrated) return null;
 
   return (
     <div className="flex min-h-screen flex-col">
