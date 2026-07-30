@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Space_Grotesk, Inter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
+import { frFR } from "@clerk/localizations";
 import { AgeGate } from "@/components/age-gate";
 import { GrainOverlay } from "@/components/grain-overlay";
 import { PwaRegister } from "@/components/pwa-register";
@@ -46,7 +47,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
+    <ClerkProvider
+      localization={frFR}
+      appearance={{
+        variables: {
+          colorPrimary: "#8b5cf6",
+          colorBackground: "#141319",
+          colorForeground: "#f4f3f8",
+          colorMutedForeground: "#a1a0ab",
+          colorInput: "#1b1a22",
+          colorInputForeground: "#f4f3f8",
+          colorBorder: "#26242e",
+          borderRadius: "1rem",
+        },
+      }}
+    >
       <html lang="fr" className={`${bodyFont.variable} ${headingFont.variable} h-full antialiased dark`}>
         <body className="min-h-full flex flex-col bg-background text-foreground">
           <PwaRegister />

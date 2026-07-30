@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useUser, SignInButton } from "@clerk/nextjs";
+import { useUser, SignInButton, UserButton } from "@clerk/nextjs";
 import { AppTopBar } from "@/components/app-top-bar";
 import { ArticleCard } from "@/components/community/article-card";
 import { PostCard } from "@/components/community/post-card";
@@ -65,7 +65,11 @@ export default function CommunautePage() {
 
   return (
     <>
-      <AppTopBar title="Communauté" idPrefix="communaute-logo" />
+      <AppTopBar
+        title="Communauté"
+        idPrefix="communaute-logo"
+        end={isSignedIn ? <UserButton /> : undefined}
+      />
       <main className="mx-auto w-full max-w-5xl flex-1 px-5 py-6">
         <div className="flex gap-2 rounded-full border border-border bg-surface p-1 text-sm">
           <button
