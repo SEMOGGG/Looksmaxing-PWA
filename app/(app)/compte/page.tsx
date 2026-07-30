@@ -26,6 +26,8 @@ const premiumFeatures = [
   "Coach IA disponible au quotidien",
   "Bilans d'analyse illimités",
   "Plan nutrition détaillé avec macros",
+  "Estimation de composition corporelle par photo",
+  "Analyse de peau par IA avec recommandations d'ingrédients",
   "Suivi photo comparatif dans le temps",
   "Analyse capillaire détaillée (coupe & barbe)",
   "Publier et commenter dans la communauté",

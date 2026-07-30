@@ -143,8 +143,66 @@ create table if not exists coach_messages (
   created_at timestamptz not null default now()
 );
 
+-- Tokens facturés par l'API pour cet échange (renseignés sur la ligne
+-- "assistant" uniquement) : base du budget mensuel réel par utilisateur,
+-- voir getMonthlyUsageCostUsd dans app/actions/coach.ts.
+alter table coach_messages add column if not exists input_tokens integer;
+alter table coach_messages add column if not exists output_tokens integer;
+
 create index if not exists coach_messages_user_idx on coach_messages (user_id, created_at asc);
 
 alter table coach_messages enable row level security;
 -- Aucune policy pour le rôle "anon" : lu/écrit uniquement par la Server
 -- Action app/actions/coach.ts, après vérification Clerk + statut Premium.
+
+-- Suivi de poids : une ligne par pesée, pour le graphique de progression
+-- dans l'onglet Nutrition.
+create table if not exists weight_entries (
+  id uuid primary key default gen_random_uuid(),
+  user_id text not null,          -- Clerk user id
+  weight_kg numeric not null,
+  recorded_at date not null default current_date,
+  created_at timestamptz not null default now(),
+  unique (user_id, recorded_at)  -- une pesée par jour : la suivante écrase celle du jour
+);
+
+create index if not exists weight_entries_user_idx on weight_entries (user_id, recorded_at asc);
+
+alter table weight_entries enable row level security;
+-- Aucune policy pour le rôle "anon" : lu/écrit uniquement par les Server
+-- Actions serveur, après vérification Clerk.
+
+-- Estimations de composition corporelle par photo (Premium, 1 par 24h).
+-- La photo elle-même n'est jamais stockée : seule l'estimation renvoyée
+-- par le modèle est conservée.
+create table if not exists body_analyses (
+  id uuid primary key default gen_random_uuid(),
+  user_id text not null,
+  range_low numeric,
+  range_high numeric,
+  notes text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists body_analyses_user_idx on body_analyses (user_id, created_at desc);
+
+alter table body_analyses enable row level security;
+-- Aucune policy pour le rôle "anon" : lu/écrit uniquement par les Server
+-- Actions serveur, après vérification Clerk + statut Premium.
+
+-- Analyses de peau par photo (Premium, 1 par 24h). Comme pour
+-- body_analyses, la photo n'est jamais stockée.
+create table if not exists skin_analyses (
+  id uuid primary key default gen_random_uuid(),
+  user_id text not null,
+  points text[] not null default '{}',
+  recommended_ingredients text[] not null default '{}',
+  notes text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists skin_analyses_user_idx on skin_analyses (user_id, created_at desc);
+
+alter table skin_analyses enable row level security;
+-- Aucune policy pour le rôle "anon" : lu/écrit uniquement par les Server
+-- Actions serveur, après vérification Clerk + statut Premium.

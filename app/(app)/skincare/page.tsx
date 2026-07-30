@@ -1,47 +1,19 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { AppTopBar } from "@/components/app-top-bar";
 import { HealthDisclaimer } from "@/components/health-disclaimer";
+import { SkinAnalysis } from "@/components/skin-analysis";
+import { getUserData } from "@/app/actions/user-data";
+import {
+  morningRoutine,
+  eveningRoutine,
+  guaShaRoutine,
+  skincareIngredients,
+  type RoutineStep,
+} from "@/lib/skincare";
 
-const morningRoutine = [
-  {
-    title: "Nettoyant doux",
-    why: "Élimine l'excès de sébum accumulé pendant la nuit sans agresser la peau.",
-  },
-  {
-    title: "Sérum vitamine C",
-    why: "Protège des agressions extérieures et aide à unifier le teint sur la durée.",
-  },
-  {
-    title: "Hydratant léger",
-    why: "Maintient la barrière cutanée et évite les tiraillements dans la journée.",
-  },
-  {
-    title: "Protection solaire SPF 30+",
-    why: "Prévient le vieillissement prématuré et les taches, même par temps couvert.",
-  },
-];
-
-const eveningRoutine = [
-  {
-    title: "Démaquillant / nettoyant",
-    why: "Retire les impuretés, le sébum et les résidus de crème solaire de la journée.",
-  },
-  {
-    title: "Actif ciblé (rétinol ou AHA/BHA, en alternance)",
-    why: "Stimule le renouvellement cellulaire ; à introduire progressivement, une à deux fois par semaine au début.",
-  },
-  {
-    title: "Crème de nuit",
-    why: "Nourrit et répare la peau pendant le sommeil, quand elle se régénère le plus.",
-  },
-];
-
-function RoutineList({
-  title,
-  steps,
-}: {
-  title: string;
-  steps: { title: string; why: string }[];
-}) {
+function RoutineList({ title, steps }: { title: string; steps: RoutineStep[] }) {
   return (
     <div>
       <h2 className="text-base font-semibold text-foreground">{title}</h2>
@@ -66,6 +38,18 @@ function RoutineList({
 }
 
 export default function SkincarePage() {
+  const [isPremium, setIsPremium] = useState(false);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    getUserData().then(({ plan }) => {
+      setIsPremium(plan === "premium");
+      setReady(true);
+    });
+  }, []);
+
+  if (!ready) return null;
+
   return (
     <>
       <AppTopBar title="Routine skincare" idPrefix="skincare-logo" />
@@ -75,6 +59,7 @@ export default function SkincarePage() {
         <div className="mt-6 flex flex-col gap-8">
           <RoutineList title="Routine du matin" steps={morningRoutine} />
           <RoutineList title="Routine du soir" steps={eveningRoutine} />
+          <RoutineList title="Routine gua sha" steps={guaShaRoutine} />
         </div>
 
         <p className="mt-8 text-xs leading-relaxed text-muted">
@@ -82,6 +67,37 @@ export default function SkincarePage() {
           votre peau pour s&rsquo;y habituer. En cas de réaction (rougeur,
           irritation), arrêtez et demandez conseil à un dermatologue.
         </p>
+
+        <SkinAnalysis isPremium={isPremium} />
+
+        <h2 className="mt-8 text-base font-semibold text-foreground">
+          Bibliothèque d&rsquo;ingrédients
+        </h2>
+        <p className="mt-1 text-sm text-muted">
+          À quoi servent les actifs les plus courants, comment les utiliser et
+          avec quelles précautions.
+        </p>
+        <div className="mt-4 flex flex-col gap-3">
+          {skincareIngredients.map((ingredient) => (
+            <div
+              key={ingredient.id}
+              id={ingredient.id}
+              className="scroll-mt-20 rounded-2xl border border-border bg-surface p-5"
+            >
+              <h3 className="text-base font-semibold text-foreground">{ingredient.name}</h3>
+              <p className="mt-1.5 text-sm leading-relaxed text-muted">{ingredient.whatItDoes}</p>
+              <p className="mt-2 text-sm text-foreground">
+                <span className="font-medium">Usage : </span>
+                <span className="text-muted">{ingredient.howToUse}</span>
+              </p>
+              <p className="mt-1 text-sm text-foreground">
+                <span className="font-medium">Précaution : </span>
+                <span className="text-muted">{ingredient.caution}</span>
+              </p>
+              <p className="mt-2 text-xs text-muted">Exemple accessible : {ingredient.exampleProduct}</p>
+            </div>
+          ))}
+        </div>
       </main>
     </>
   );

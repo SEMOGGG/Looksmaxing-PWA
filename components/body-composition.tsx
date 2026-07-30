@@ -1,0 +1,134 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { CameraIcon, InfoIcon, LockIcon } from "@/components/icons";
+import {
+  analyzeBodyComposition,
+  getLatestBodyAnalysis,
+  type BodyAnalysisResult,
+} from "@/app/actions/body-analysis";
+
+export function BodyComposition({ isPremium }: { isPremium: boolean }) {
+  const [result, setResult] = useState<BodyAnalysisResult | null>(null);
+  const [consent, setConsent] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!isPremium) {
+      setReady(true);
+      return;
+    }
+    getLatestBodyAnalysis().then((data) => {
+      setResult(data);
+      setReady(true);
+    });
+  }, [isPremium]);
+
+  function handleFile(file: File | undefined) {
+    if (!file || !consent) return;
+    setError(null);
+    const reader = new FileReader();
+    reader.onload = async () => {
+      if (typeof reader.result !== "string") return;
+      setAnalyzing(true);
+      const response = await analyzeBodyComposition(reader.result);
+      setAnalyzing(false);
+      if (!response.ok) {
+        setError(response.error);
+        return;
+      }
+      setResult(response.result);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  if (!ready) return null;
+
+  return (
+    <div className="mt-4 rounded-2xl border border-border bg-surface p-5">
+      <h2 className="text-base font-semibold text-foreground">
+        Estimation de composition corporelle
+      </h2>
+
+      <div className="mt-2 flex items-start gap-2.5 rounded-xl border border-border bg-surface-muted px-4 py-3 text-xs leading-relaxed text-muted">
+        <InfoIcon className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+        <p>
+          Estimation visuelle approximative par IA, à partir d&rsquo;une photo — ce
+          n&rsquo;est pas une mesure clinique. Seuls des examens comme le DEXA ou
+          l&rsquo;impédancemétrie sont fiables pour un chiffre précis. Ne prenez
+          aucune décision de santé sur cette seule base.
+        </p>
+      </div>
+
+      {!isPremium ? (
+        <div className="mt-3 flex items-center gap-3 rounded-xl border border-dashed border-border bg-surface-muted p-4">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface text-muted">
+            <LockIcon className="h-4 w-4" />
+          </div>
+          <p className="text-sm text-muted">
+            Réservé aux membres{" "}
+            <span className="font-medium text-foreground">Premium</span>.{" "}
+            <Link href="/compte" className="font-medium text-accent-strong underline underline-offset-2">
+              Débloquer
+            </Link>
+          </p>
+        </div>
+      ) : (
+        <>
+          {result && (
+            <div className="mt-3 rounded-xl border border-border bg-surface-muted p-4">
+              {result.rangeLow !== null && result.rangeHigh !== null ? (
+                <p className="font-heading text-xl font-semibold text-accent-strong">
+                  {result.rangeLow}–{result.rangeHigh} % de graisse corporelle (estimation)
+                </p>
+              ) : (
+                <p className="text-sm font-medium text-foreground">Analyse non concluante</p>
+              )}
+              <p className="mt-1.5 text-sm leading-relaxed text-muted">{result.notes}</p>
+            </div>
+          )}
+
+          <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-surface-muted p-3.5 text-sm text-foreground">
+            <input
+              type="checkbox"
+              checked={consent}
+              onChange={(e) => setConsent(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
+            />
+            <span>
+              J&rsquo;autorise l&rsquo;envoi de cette photo à notre service d&rsquo;analyse
+              pour cette estimation uniquement ; la photo n&rsquo;est pas conservée.
+            </span>
+          </label>
+
+          <button
+            type="button"
+            disabled={!consent || analyzing}
+            onClick={() => inputRef.current?.click()}
+            className="mt-3 flex w-full flex-col items-center gap-2 rounded-2xl border border-dashed border-border bg-surface-muted p-6 text-center transition-colors disabled:cursor-not-allowed disabled:opacity-40 enabled:hover:border-accent/50"
+          >
+            <CameraIcon className="h-5 w-5 text-accent" />
+            <span className="text-sm font-medium text-foreground">
+              {analyzing ? "Analyse en cours…" : "Envoyer une photo"}
+            </span>
+            <span className="text-xs text-muted">1 estimation par 24h maximum</span>
+          </button>
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => handleFile(e.target.files?.[0])}
+          />
+
+          {error && <p className="mt-2 text-xs text-danger">{error}</p>}
+        </>
+      )}
+    </div>
+  );
+}

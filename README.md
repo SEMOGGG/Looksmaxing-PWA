@@ -9,9 +9,12 @@ d'abonnement et espace Communauté sont liés à un compte, pas à un appareil.
 - Next.js 15 (App Router) + React 19
 - Tailwind CSS v4
 - Clerk — authentification (compte créé en fin d'onboarding)
-- Supabase — profil utilisateur + publications/commentaires de la Communauté
-  + historique du Coach IA
-- Claude (Anthropic, modèle Haiku) — Coach IA, réservé au Premium
+- Supabase — profil utilisateur, poids, publications/commentaires de la
+  Communauté, historique du Coach IA, analyses corporelles/peau par photo
+- Claude (Anthropic) — Coach IA (Haiku, avec outil de recherche
+  nutritionnelle USDA) et analyses par photo (Sonnet), réservés au Premium
+- USDA FoodData Central (API publique gratuite) — valeurs nutritionnelles
+  réelles pour les questions du Coach IA sur la composition des aliments
 - PWA : `public/manifest.json` + `public/sw.js`
 - Prévu : Stripe (abonnement Premium réel — structure visuelle seulement
   pour l'instant, le champ `plan` existe déjà côté Supabase)
@@ -35,24 +38,34 @@ SUPABASE_SECRET_KEY=
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
 CLERK_SECRET_KEY=
 ANTHROPIC_API_KEY=
+USDA_API_KEY=
 ```
 
-Les mêmes 5 variables doivent aussi être ajoutées dans les paramètres du
-projet Vercel (Production **et** Preview) pour que le déploiement fonctionne.
+`USDA_API_KEY` est optionnelle (clé gratuite sur
+https://fdc.nal.usda.gov/api-key-signup) ; à défaut, le Coach IA utilise
+`DEMO_KEY`, partagée et limitée en nombre de requêtes/heure — suffisant
+pour tester, mais une clé personnelle est recommandée en production.
+
+Les autres variables doivent être ajoutées dans les paramètres du projet
+Vercel (Production **et** Preview) pour que le déploiement fonctionne.
 
 Avant la première utilisation, exécuter le contenu de `supabase/schema.sql`
 dans l'éditeur SQL du projet Supabase : tables Communauté (posts/
 commentaires/likes/signalements), `user_profiles` (profil + abonnement +
-forme de visage, une ligne par compte Clerk) et `coach_messages`
-(historique du Coach IA), avec policies RLS. Les publications de
-démonstration de la Communauté sont insérées automatiquement au premier
-chargement si la table est vide (voir `seedIfEmpty` dans
-`app/(app)/communaute/actions.ts`).
+forme de visage), `coach_messages` (historique du Coach IA, avec tokens
+facturés pour le budget mensuel), `weight_entries` (suivi de poids),
+`body_analyses` et `skin_analyses` (estimations par photo), avec policies
+RLS. Les publications de démonstration de la Communauté sont insérées
+automatiquement au premier chargement si la table est vide (voir
+`seedIfEmpty` dans `app/(app)/communaute/actions.ts`).
 
-Le Coach IA (`/coach`) est réservé au Premium et plafonné à 30 messages
-par jour et par membre (voir `lib/coach.ts`) pour garder les coûts sous
-contrôle ; il utilise Claude Haiku (le modèle le plus économique de la
-gamme), avec des réponses courtes et un contexte de conversation borné.
+Le Coach IA (`/coach`, Premium) utilise Claude Haiku avec un outil de
+recherche nutritionnelle (USDA FoodData Central), un garde-fou de 200
+messages/jour par membre, et surtout un **budget mensuel réel de 2,50$
+par membre** calculé sur les tokens effectivement facturés par l'API
+(voir `getMonthlyUsageCostUsd` dans `app/actions/coach.ts`) — le nombre de
+messages seul ne suffit pas à garantir un plafond en euros, donc le
+budget se base sur l'usage facturé, pas sur un simple comptage.
 
 ## Structure
 
@@ -66,7 +79,16 @@ gamme), avec des réponses courtes et un contexte de conversation borné.
 - `app/(app)/communaute/actions.ts` — Server Actions de la Communauté
   (lecture/écriture Supabase, vérification Clerk, modération)
 - `app/actions/coach.ts` — Server Actions du Coach IA (vérification Premium,
-  quota quotidien, appel à l'API Claude, persistance de l'historique)
+  quota quotidien, budget mensuel réel, boucle d'outils, appel à l'API
+  Claude, persistance de l'historique)
+- `app/actions/weight.ts` — Server Actions du suivi de poids
+- `app/actions/body-analysis.ts` / `app/actions/skin-analysis.ts` —
+  Server Actions des estimations par photo (Premium, 1 par 24h, photo non
+  conservée)
+- `lib/food-data.ts` — recherche de valeurs nutritionnelles réelles via
+  l'API USDA FoodData Central (outil du Coach IA)
+- `lib/skincare.ts` — routines (matin/soir/gua sha) et bibliothèque
+  d'ingrédients skincare
 - `components/` — briques d'interface partagées (header, footer, garde
   d'âge, barre de navigation mobile, icônes, disclaimer santé, logo)
 - `components/onboarding/` et `components/community/` — composants propres
@@ -98,8 +120,15 @@ gamme), avec des réponses courtes et un contexte de conversation borné.
       réservée au Premium, modération par mots-clés (à remplacer par un
       vrai modèle de modération IA), backend réel Clerk + Supabase
 - [x] Mentions légales, confidentialité, conditions d'utilisation
-- [x] Coach IA (Premium) : chat avec Claude Haiku, garde-fous santé/sécurité
-      dans le prompt système, quota quotidien pour maîtriser les coûts
+- [x] Coach IA (Premium) : chat avec Claude Haiku + recherche nutritionnelle
+      réelle (USDA), garde-fous santé/sécurité, programmes d'entraînement
+      personnalisés, conseils produits — budget mensuel réel par membre
+- [x] Nutrition : suivi de poids (graphique), repères sodium/potassium et
+      hydratation personnalisée, estimation de composition corporelle par
+      photo (Premium, estimation visuelle avec disclaimers, pas une mesure
+      clinique)
+- [x] Skincare : routine gua sha, bibliothèque d'ingrédients (niacinamide,
+      rétinol, céramides, SPF...), analyse de peau par IA (Premium)
 - [ ] Abonnement Premium réel (Stripe) — le changement de plan sur la page
       Compte est encore un bouton libre, sans paiement
 - [ ] Vraie modération IA de la Communauté (actuellement liste de mots-clés)

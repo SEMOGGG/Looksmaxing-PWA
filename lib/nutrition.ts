@@ -77,3 +77,36 @@ export function calculateTargets(profile: OnboardingData): NutritionTargets {
     adjustment,
   };
 }
+
+export type HydrationTargets = {
+  waterMl: number;
+  sodiumMaxMg: number;
+  potassiumTargetMg: number;
+};
+
+// Coefficient d'ajustement de l'eau selon le niveau d'activité (repère
+// indicatif, à ajuster aux sensations et au climat).
+const WATER_ACTIVITY_MULTIPLIER: Record<NonNullable<OnboardingData["activityLevel"]>, number> = {
+  sedentaire: 1,
+  leger: 1.05,
+  modere: 1.1,
+  actif: 1.2,
+  tres_actif: 1.3,
+};
+
+// Repères construits à partir de recommandations de santé publique
+// largement citées (OMS pour le sodium/potassium, ~30-35 ml/kg pour l'eau) :
+// un ratio sodium/potassium proche de 1 ou en dessous, plutôt qu'un chiffre
+// personnel mesuré, est associé à une meilleure régulation de l'eau
+// corporelle.
+export function calculateHydrationTargets(profile: OnboardingData): HydrationTargets {
+  const weight = parseFloat(profile.weightKg) || 70;
+  const multiplier = profile.activityLevel ? WATER_ACTIVITY_MULTIPLIER[profile.activityLevel] : 1;
+  const waterMl = Math.round((weight * 33 * multiplier) / 50) * 50;
+
+  return {
+    waterMl,
+    sodiumMaxMg: 2000,
+    potassiumTargetMg: 3500,
+  };
+}

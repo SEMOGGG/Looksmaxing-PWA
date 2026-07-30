@@ -6,9 +6,11 @@ import { AppTopBar } from "@/components/app-top-bar";
 import { DemoProfileBanner } from "@/components/demo-profile-banner";
 import { HealthDisclaimer } from "@/components/health-disclaimer";
 import { LockIcon } from "@/components/icons";
+import { WeightTracker } from "@/components/weight-tracker";
+import { BodyComposition } from "@/components/body-composition";
 import { demoProfile, type OnboardingData } from "@/lib/onboarding";
 import { getUserData, saveUserProfile } from "@/app/actions/user-data";
-import { calculateTargets } from "@/lib/nutrition";
+import { calculateTargets, calculateHydrationTargets } from "@/lib/nutrition";
 import type { Plan } from "@/lib/user-data";
 
 const adjustmentCopy = {
@@ -61,6 +63,7 @@ export default function NutritionPage() {
   const carbsPct = Math.round(((targets.carbsG * 4) / totalCal) * 100);
   const fatPct = 100 - proteinPct - carbsPct;
   const adjustment = adjustmentCopy[targets.adjustment];
+  const hydration = calculateHydrationTargets(profile);
 
   return (
     <>
@@ -104,6 +107,9 @@ export default function NutritionPage() {
           <p className="mt-2 text-sm font-medium text-foreground">{adjustment.label}</p>
           <p className="mt-1 text-sm leading-relaxed text-muted">{adjustment.text}</p>
         </div>
+
+        <WeightTracker isDemo={isDemo} />
+        <BodyComposition isPremium={plan === "premium"} />
 
         {plan === "premium" ? (
           <div className="mt-4 rounded-2xl border border-border bg-surface p-5">
@@ -160,6 +166,37 @@ export default function NutritionPage() {
             </div>
           </div>
         )}
+
+        <div className="mt-4 rounded-2xl border border-border bg-surface p-5">
+          <h2 className="text-base font-semibold text-foreground">
+            Hydratation & rétention d&rsquo;eau
+          </h2>
+          <div className="mt-4 grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-2xl font-semibold text-foreground">
+                {(hydration.waterMl / 1000).toFixed(1)}{" "}
+                <span className="text-sm font-normal text-muted">L / jour</span>
+              </p>
+              <p className="mt-1 text-xs text-muted">Eau, ajustée à votre activité</p>
+            </div>
+            <div>
+              <p className="text-2xl font-semibold text-foreground">
+                ≤ {hydration.sodiumMaxMg} <span className="text-sm font-normal text-muted">mg</span>
+              </p>
+              <p className="mt-1 text-xs text-muted">Sodium maximum par jour</p>
+            </div>
+          </div>
+          <p className="mt-3 text-sm text-foreground">
+            Potassium visé : ≥ {hydration.potassiumTargetMg} mg/jour
+          </p>
+          <p className="mt-2 text-xs leading-relaxed text-muted">
+            Un ratio sodium/potassium bas (peu de sodium, assez de potassium — légumes,
+            fruits, légumineuses) est associé à une meilleure régulation de l&rsquo;eau
+            corporelle. Le potassium se trouve par exemple dans la patate douce, la
+            banane, les épinards ou les haricots blancs ; le sodium principalement dans
+            les plats préparés, la charcuterie et les snacks salés.
+          </p>
+        </div>
 
         <label className="mt-4 block rounded-2xl border border-border bg-surface p-5">
           <span className="text-base font-semibold text-foreground">Pas quotidiens</span>

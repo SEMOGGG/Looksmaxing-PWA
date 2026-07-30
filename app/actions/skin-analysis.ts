@@ -1,0 +1,155 @@
+"use server";
+
+import { auth } from "@clerk/nextjs/server";
+import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { getUserData } from "@/app/actions/user-data";
+import { skincareIngredients } from "@/lib/skincare";
+
+// Même logique que l'estimation de composition corporelle : modèle plus
+// capable (usage ponctuel, pas un chat), 1 analyse par 24h, aucune
+// conservation de la photo.
+const SKIN_ANALYSIS_MODEL = "claude-sonnet-5";
+const ANALYSIS_COOLDOWN_HOURS = 24;
+
+export type SkinAnalysisResult = {
+  points: string[];
+  recommendedIngredients: string[];
+  notes: string;
+  createdAt: string;
+};
+
+type SkinAnalysisRow = {
+  points: string[];
+  recommended_ingredients: string[];
+  notes: string;
+  created_at: string;
+};
+
+function rowToResult(row: SkinAnalysisRow): SkinAnalysisResult {
+  return {
+    points: row.points,
+    recommendedIngredients: row.recommended_ingredients,
+    notes: row.notes,
+    createdAt: row.created_at,
+  };
+}
+
+export async function getLatestSkinAnalysis(): Promise<SkinAnalysisResult | null> {
+  const { userId } = await auth();
+  if (!userId) return null;
+
+  const supabase = getSupabaseServerClient();
+  const { data } = await supabase
+    .from("skin_analyses")
+    .select("points, recommended_ingredients, notes, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<SkinAnalysisRow>();
+
+  return data ? rowToResult(data) : null;
+}
+
+type TextBlock = { type: "text"; text: string };
+
+function buildPrompt(): string {
+  const ingredientNames = skincareIngredients.map((i) => i.name).join(", ");
+  return `Analyse cette photo de visage et donne une évaluation générale de l'état de la peau (pas un diagnostic dermatologique) : brillance/zones sèches, texture, pores visibles, rougeurs apparentes, signes de déshydratation.
+
+Recommande uniquement parmi ces ingrédients déjà présents dans l'application (ne recommande rien d'autre) : ${ingredientNames}.
+
+Réponds uniquement avec un objet JSON strict, sans texte autour ni balises markdown, au format exact :
+{"points": ["<observation 1>", "<observation 2>", "..."], "recommendedIngredients": ["<nom exact d'un ingrédient de la liste>", "..."], "notes": "<1 à 2 phrases bienveillantes de synthèse, en français>"}
+
+Si la photo ne permet pas d'évaluer (angle, éclairage, maquillage couvrant), mets points et recommendedIngredients à des tableaux vides et explique pourquoi dans notes.`;
+}
+
+export async function analyzeSkin(
+  photoDataUrl: string
+): Promise<{ ok: true; result: SkinAnalysisResult } | { ok: false; error: string }> {
+  const { userId } = await auth();
+  if (!userId) return { ok: false, error: "Connectez-vous pour utiliser cette fonctionnalité." };
+
+  const { plan } = await getUserData();
+  if (plan !== "premium") return { ok: false, error: "Fonctionnalité réservée aux membres Premium." };
+
+  const supabase = getSupabaseServerClient();
+
+  const cooldownStart = new Date(Date.now() - ANALYSIS_COOLDOWN_HOURS * 60 * 60 * 1000);
+  const { data: recent } = await supabase
+    .from("skin_analyses")
+    .select("id")
+    .eq("user_id", userId)
+    .gte("created_at", cooldownStart.toISOString())
+    .limit(1);
+
+  if (recent && recent.length > 0) {
+    return { ok: false, error: "Une analyse par 24h maximum. Réessayez plus tard." };
+  }
+
+  const match = photoDataUrl.match(/^data:(image\/[a-zA-Z]+);base64,(.+)$/);
+  if (!match) return { ok: false, error: "Photo invalide." };
+  const [, mediaType, base64Data] = match;
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return { ok: false, error: "Configuration serveur manquante." };
+
+  let response: Response;
+  try {
+    response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: SKIN_ANALYSIS_MODEL,
+        max_tokens: 500,
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "image", source: { type: "base64", media_type: mediaType, data: base64Data } },
+              { type: "text", text: buildPrompt() },
+            ],
+          },
+        ],
+      }),
+    });
+  } catch {
+    return { ok: false, error: "Analyse indisponible pour le moment, réessayez plus tard." };
+  }
+
+  if (!response.ok) {
+    return { ok: false, error: "Analyse indisponible pour le moment, réessayez plus tard." };
+  }
+
+  const data: { content: TextBlock[] } = await response.json();
+  const text = data.content?.find((block) => block.type === "text")?.text ?? "";
+
+  let parsed: { points: string[]; recommendedIngredients: string[]; notes: string };
+  try {
+    parsed = JSON.parse(text.trim());
+  } catch {
+    return { ok: false, error: "Réponse inattendue de l'analyse, réessayez." };
+  }
+
+  const { error } = await supabase.from("skin_analyses").insert({
+    user_id: userId,
+    points: parsed.points ?? [],
+    recommended_ingredients: parsed.recommendedIngredients ?? [],
+    notes: parsed.notes ?? "",
+  });
+  if (error) return { ok: false, error: "Une erreur est survenue lors de l'enregistrement." };
+
+  return {
+    ok: true,
+    result: {
+      points: parsed.points ?? [],
+      recommendedIngredients: parsed.recommendedIngredients ?? [],
+      notes: parsed.notes ?? "",
+      createdAt: new Date().toISOString(),
+    },
+  };
+}

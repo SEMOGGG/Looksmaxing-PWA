@@ -1,12 +1,18 @@
 type Point = { label: string; value: number };
 
-export function ProgressChart({ points }: { points: Point[] }) {
+export function ProgressChart({
+  points,
+  min = 0,
+  max = 100,
+}: {
+  points: Point[];
+  min?: number;
+  max?: number;
+}) {
   const width = 320;
   const height = 140;
   const padX = 16;
   const padY = 20;
-  const min = 0;
-  const max = 100;
 
   const stepX = points.length > 1 ? (width - padX * 2) / (points.length - 1) : 0;
   const coords = points.map((p, i) => ({
