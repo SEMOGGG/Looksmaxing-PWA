@@ -4,6 +4,8 @@ import { auth } from "@clerk/nextjs/server";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { getUserData } from "@/app/actions/user-data";
 import { skincareIngredients } from "@/lib/skincare";
+import { photoDataUrlSchema } from "@/lib/validation";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 // Même logique que l'estimation de composition corporelle : modèle plus
 // capable (usage ponctuel, pas un chat), 1 analyse par 24h, aucune
@@ -70,6 +72,9 @@ export async function analyzeSkin(
   const { userId } = await auth();
   if (!userId) return { ok: false, error: "Connectez-vous pour utiliser cette fonctionnalité." };
 
+  const allowed = await checkRateLimit("photoAnalysis", userId);
+  if (!allowed) return { ok: false, error: "Trop de tentatives, patientez avant de réessayer." };
+
   const { plan } = await getUserData();
   if (plan !== "premium") return { ok: false, error: "Fonctionnalité réservée aux membres Premium." };
 
@@ -87,7 +92,9 @@ export async function analyzeSkin(
     return { ok: false, error: "Une analyse par 24h maximum. Réessayez plus tard." };
   }
 
-  const match = photoDataUrl.match(/^data:(image\/[a-zA-Z]+);base64,(.+)$/);
+  const parsedPhoto = photoDataUrlSchema.safeParse(photoDataUrl);
+  if (!parsedPhoto.success) return { ok: false, error: parsedPhoto.error.issues[0]?.message ?? "Photo invalide." };
+  const match = parsedPhoto.data.match(/^data:(image\/[a-zA-Z]+);base64,(.+)$/);
   if (!match) return { ok: false, error: "Photo invalide." };
   const [, mediaType, base64Data] = match;
 

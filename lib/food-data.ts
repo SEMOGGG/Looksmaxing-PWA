@@ -1,3 +1,5 @@
+import "server-only";
+
 // Recherche de valeurs nutritionnelles réelles via l'API publique et
 // gratuite USDA FoodData Central (base de données du gouvernement
 // américain), utilisée comme outil par le Coach IA plutôt que de laisser

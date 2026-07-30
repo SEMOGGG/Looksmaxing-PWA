@@ -39,12 +39,20 @@ NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
 CLERK_SECRET_KEY=
 ANTHROPIC_API_KEY=
 USDA_API_KEY=
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
 ```
 
 `USDA_API_KEY` est optionnelle (clé gratuite sur
 https://fdc.nal.usda.gov/api-key-signup) ; à défaut, le Coach IA utilise
 `DEMO_KEY`, partagée et limitée en nombre de requêtes/heure — suffisant
 pour tester, mais une clé personnelle est recommandée en production.
+
+`UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` sont optionnelles
+(compte gratuit sur https://upstash.com) : elles activent le rate limiting
+sur le Coach IA, les analyses par photo, les publications communauté et la
+sauvegarde de profil (voir `lib/rate-limit.ts`). Sans elles, ces routes
+restent fonctionnelles mais sans limite de fréquence.
 
 Les autres variables doivent être ajoutées dans les paramètres du projet
 Vercel (Production **et** Preview) pour que le déploiement fonctionne.
@@ -87,6 +95,14 @@ budget se base sur l'usage facturé, pas sur un simple comptage.
   conservée)
 - `lib/food-data.ts` — recherche de valeurs nutritionnelles réelles via
   l'API USDA FoodData Central (outil du Coach IA)
+- `lib/validation.ts` — schémas Zod utilisés par toutes les Server Actions
+  qui écrivent des données (défense en profondeur : une Server Action est
+  un endpoint appelable directement, pas seulement depuis l'UI)
+- `lib/rate-limit.ts` — rate limiting optionnel (Upstash Redis) sur les
+  routes sensibles ; no-op si non configuré
+- `app/actions/delete-account.ts` — suppression de compte en cascade
+  (toutes les tables Supabase liées + compte Clerk), accessible depuis la
+  page Compte
 - `lib/skincare.ts` — routines (matin/soir/gua sha) et bibliothèque
   d'ingrédients skincare
 - `components/` — briques d'interface partagées (header, footer, garde
@@ -129,6 +145,9 @@ budget se base sur l'usage facturé, pas sur un simple comptage.
       clinique)
 - [x] Skincare : routine gua sha, bibliothèque d'ingrédients (niacinamide,
       rétinol, céramides, SPF...), analyse de peau par IA (Premium)
+- [x] Audit de sécurité : validation Zod sur toutes les Server Actions
+      mutantes, rate limiting optionnel (Upstash), headers HTTP (CSP,
+      HSTS, X-Frame-Options...), suppression de compte en cascade (RGPD)
 - [ ] Abonnement Premium réel (Stripe) — le changement de plan sur la page
       Compte est encore un bouton libre, sans paiement
 - [ ] Vraie modération IA de la Communauté (actuellement liste de mots-clés)

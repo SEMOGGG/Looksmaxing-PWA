@@ -4,6 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { getUserData } from "@/app/actions/user-data";
 import { lookupFoodNutrition } from "@/lib/food-data";
+import { checkRateLimit } from "@/lib/rate-limit";
 import {
   COACH_MODEL,
   COACH_SYSTEM_PROMPT,
@@ -171,6 +172,9 @@ export async function sendCoachMessage(
 ): Promise<{ ok: true; messages: CoachMessage[] } | { ok: false; error: string }> {
   const { userId } = await auth();
   if (!userId) return { ok: false, error: "Connectez-vous pour parler au coach." };
+
+  const allowed = await checkRateLimit("coachMessage", userId);
+  if (!allowed) return { ok: false, error: "Trop de messages envoyés d'un coup, patientez un instant." };
 
   const trimmed = content.trim();
   if (!trimmed) return { ok: false, error: "Votre message est vide." };

@@ -1,8 +1,13 @@
 "use server";
 
+import { z } from "zod";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { moderateContent, seedPosts, type ArticleCategory, type Post } from "@/lib/community";
+import { articleCategorySchema, postContentSchema, commentContentSchema } from "@/lib/validation";
+import { checkRateLimit } from "@/lib/rate-limit";
+
+const postIdSchema = z.string().uuid();
 
 type ActionResult = { ok: true; posts: Post[] } | { ok: false; error: string };
 
@@ -91,7 +96,16 @@ export async function createPost(content: string, category: ArticleCategory): Pr
   const { userId } = await auth();
   if (!userId) return { ok: false, error: "Connectez-vous pour publier dans la communauté." };
 
-  const moderation = moderateContent(content);
+  const allowed = await checkRateLimit("communityWrite", userId);
+  if (!allowed) return { ok: false, error: "Trop de publications d'un coup, patientez un instant." };
+
+  const parsedContent = postContentSchema.safeParse(content);
+  const parsedCategory = articleCategorySchema.safeParse(category);
+  if (!parsedContent.success || !parsedCategory.success) {
+    return { ok: false, error: "Message invalide." };
+  }
+
+  const moderation = moderateContent(parsedContent.data);
   if (moderation.status === "flagged") {
     return { ok: false, error: moderation.reason ?? "Message non autorisé." };
   }
@@ -100,8 +114,8 @@ export async function createPost(content: string, category: ArticleCategory): Pr
   const { error } = await supabase.from("community_posts").insert({
     author_id: userId,
     author_display_name: await resolveDisplayName(),
-    category,
-    content,
+    category: parsedCategory.data,
+    content: parsedContent.data,
     moderation_status: "approved",
   });
 
@@ -113,17 +127,26 @@ export async function createComment(postId: string, content: string): Promise<Ac
   const { userId } = await auth();
   if (!userId) return { ok: false, error: "Connectez-vous pour commenter." };
 
-  const moderation = moderateContent(content);
+  const allowed = await checkRateLimit("communityWrite", userId);
+  if (!allowed) return { ok: false, error: "Trop de commentaires d'un coup, patientez un instant." };
+
+  const parsedPostId = postIdSchema.safeParse(postId);
+  const parsedContent = commentContentSchema.safeParse(content);
+  if (!parsedPostId.success || !parsedContent.success) {
+    return { ok: false, error: "Commentaire invalide." };
+  }
+
+  const moderation = moderateContent(parsedContent.data);
   if (moderation.status === "flagged") {
     return { ok: false, error: moderation.reason ?? "Message non autorisé." };
   }
 
   const supabase = getSupabaseServerClient();
   const { error } = await supabase.from("community_comments").insert({
-    post_id: postId,
+    post_id: parsedPostId.data,
     author_id: userId,
     author_display_name: await resolveDisplayName(),
-    content,
+    content: parsedContent.data,
     moderation_status: "approved",
   });
 
@@ -134,6 +157,9 @@ export async function createComment(postId: string, content: string): Promise<Ac
 export async function toggleLike(postId: string, liked: boolean): Promise<ActionResult> {
   const { userId } = await auth();
   if (!userId) return { ok: false, error: "Connectez-vous pour aimer une publication." };
+
+  const parsedPostId = postIdSchema.safeParse(postId);
+  if (!parsedPostId.success) return { ok: false, error: "Publication invalide." };
 
   const supabase = getSupabaseServerClient();
   if (liked) {
@@ -160,9 +186,12 @@ export async function reportPost(
   const { userId } = await auth();
   if (!userId) return { ok: false, error: "Connectez-vous pour signaler un contenu." };
 
+  const parsedPostId = postIdSchema.safeParse(postId);
+  if (!parsedPostId.success) return { ok: false, error: "Publication invalide." };
+
   const supabase = getSupabaseServerClient();
   const { error } = await supabase.from("community_reports").insert({
-    post_id: postId,
+    post_id: parsedPostId.data,
     reporter_id: userId,
   });
 

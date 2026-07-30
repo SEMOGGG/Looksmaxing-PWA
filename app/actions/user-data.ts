@@ -2,6 +2,8 @@
 
 import { auth } from "@clerk/nextjs/server";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { onboardingProfileSchema, faceShapeSchema, planSchema } from "@/lib/validation";
+import { checkRateLimit } from "@/lib/rate-limit";
 import type { OnboardingData } from "@/lib/onboarding";
 import type { Plan } from "@/lib/user-data";
 import type { FaceShape } from "@/lib/hair";
@@ -49,7 +51,9 @@ export async function getUserData(): Promise<UserData> {
   const supabase = getSupabaseServerClient();
   const { data } = await supabase
     .from("user_profiles")
-    .select("*")
+    .select(
+      "plan, consent_given, photo_data_url, age, sex, height_cm, weight_kg, activity_level, steps, goals, face_shape"
+    )
     .eq("user_id", userId)
     .maybeSingle<ProfileRow>();
 
@@ -65,19 +69,23 @@ export async function getUserData(): Promise<UserData> {
 export async function saveUserProfile(profile: OnboardingData): Promise<{ ok: boolean }> {
   const { userId } = await auth();
   if (!userId) return { ok: false };
+  if (!(await checkRateLimit("profileWrite", userId))) return { ok: false };
+
+  const parsed = onboardingProfileSchema.safeParse(profile);
+  if (!parsed.success) return { ok: false };
 
   const supabase = getSupabaseServerClient();
   const { error } = await supabase.from("user_profiles").upsert({
     user_id: userId,
-    consent_given: profile.consentGiven,
-    photo_data_url: profile.photoDataUrl,
-    age: profile.age,
-    sex: profile.sex,
-    height_cm: profile.heightCm,
-    weight_kg: profile.weightKg,
-    activity_level: profile.activityLevel,
-    steps: profile.steps,
-    goals: profile.goals,
+    consent_given: parsed.data.consentGiven,
+    photo_data_url: parsed.data.photoDataUrl,
+    age: parsed.data.age,
+    sex: parsed.data.sex,
+    height_cm: parsed.data.heightCm,
+    weight_kg: parsed.data.weightKg,
+    activity_level: parsed.data.activityLevel,
+    steps: parsed.data.steps,
+    goals: parsed.data.goals,
     updated_at: new Date().toISOString(),
   });
 
@@ -87,11 +95,15 @@ export async function saveUserProfile(profile: OnboardingData): Promise<{ ok: bo
 export async function saveUserPlan(plan: Plan): Promise<{ ok: boolean }> {
   const { userId } = await auth();
   if (!userId) return { ok: false };
+  if (!(await checkRateLimit("profileWrite", userId))) return { ok: false };
+
+  const parsed = planSchema.safeParse(plan);
+  if (!parsed.success) return { ok: false };
 
   const supabase = getSupabaseServerClient();
   const { error } = await supabase
     .from("user_profiles")
-    .upsert({ user_id: userId, plan, updated_at: new Date().toISOString() });
+    .upsert({ user_id: userId, plan: parsed.data, updated_at: new Date().toISOString() });
 
   return { ok: !error };
 }
@@ -99,11 +111,15 @@ export async function saveUserPlan(plan: Plan): Promise<{ ok: boolean }> {
 export async function saveFaceShapeData(faceShape: FaceShape): Promise<{ ok: boolean }> {
   const { userId } = await auth();
   if (!userId) return { ok: false };
+  if (!(await checkRateLimit("profileWrite", userId))) return { ok: false };
+
+  const parsed = faceShapeSchema.safeParse(faceShape);
+  if (!parsed.success) return { ok: false };
 
   const supabase = getSupabaseServerClient();
   const { error } = await supabase
     .from("user_profiles")
-    .upsert({ user_id: userId, face_shape: faceShape, updated_at: new Date().toISOString() });
+    .upsert({ user_id: userId, face_shape: parsed.data, updated_at: new Date().toISOString() });
 
   return { ok: !error };
 }

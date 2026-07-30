@@ -5,6 +5,7 @@ import { AppTopBar } from "@/components/app-top-bar";
 import { DemoProfileBanner } from "@/components/demo-profile-banner";
 import { ProgressChart } from "@/components/progress-chart";
 import { CheckIcon, LockIcon } from "@/components/icons";
+import { DeleteAccountSection } from "@/components/delete-account-section";
 import { demoProfile, type Goal } from "@/lib/onboarding";
 import { getUserData, saveUserPlan } from "@/app/actions/user-data";
 import { generateAnalysis } from "@/lib/analysis";
@@ -232,6 +233,8 @@ export default function ComptePage() {
             </p>
           </div>
         </div>
+
+        {!isDemo && <DeleteAccountSection />}
       </main>
     </>
   );
