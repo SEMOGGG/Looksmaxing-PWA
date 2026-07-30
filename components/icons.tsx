@@ -116,6 +116,63 @@ export function InfoIcon(props: IconProps) {
   );
 }
 
+export function UsersIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="9" cy="8.5" r="3" />
+      <path d="M3 20c.9-3.2 3.2-5 6-5s5.1 1.8 6 5" />
+      <path d="M15.5 6.2a3 3 0 0 1 0 5.8" />
+      <path d="M17 15.3c2.4.4 4 2 4.6 4.7" />
+    </svg>
+  );
+}
+
+export function ScissorsIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="6" cy="6" r="2.4" />
+      <circle cx="6" cy="18" r="2.4" />
+      <path d="M7.8 7.6 20 18M7.8 16.4 20 6" />
+    </svg>
+  );
+}
+
+export function GridIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="4" y="4" width="7" height="7" rx="1.5" />
+      <rect x="13" y="4" width="7" height="7" rx="1.5" />
+      <rect x="4" y="13" width="7" height="7" rx="1.5" />
+      <rect x="13" y="13" width="7" height="7" rx="1.5" />
+    </svg>
+  );
+}
+
+export function FlagIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M6 3v18" />
+      <path d="M6 4.5c3-1.5 5 1.5 8 0v9c-3 1.5-5-1.5-8 0Z" />
+    </svg>
+  );
+}
+
+export function MessageIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M4 5.5h16v10H9l-4 3.5v-3.5H4Z" />
+    </svg>
+  );
+}
+
+export function HeartIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M12 20s-7-4.4-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 5c-2.5 4.6-9.5 9-9.5 9Z" />
+    </svg>
+  );
+}
+
 const iconMap = {
   home: HomeIcon,
   sparkles: SparklesIcon,
@@ -123,6 +180,9 @@ const iconMap = {
   droplet: DropletIcon,
   pill: PillIcon,
   user: UserIcon,
+  users: UsersIcon,
+  grid: GridIcon,
+  scissors: ScissorsIcon,
 };
 
 export function NavIcon({

@@ -101,10 +101,10 @@ export default function AnalysePage() {
             <ArrowRightIcon className="h-4 w-4" />
           </Link>
           <Link
-            href="/skincare"
+            href="/routine"
             className="flex flex-1 items-center justify-center gap-2 rounded-full border border-border px-5 py-3.5 text-sm font-medium text-foreground transition-colors hover:border-accent/50"
           >
-            Voir ma routine skincare
+            Voir ma routine
           </Link>
         </div>
       </main>

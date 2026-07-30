@@ -5,7 +5,7 @@
 export type NavItem = {
   label: string;
   href: string;
-  icon: "home" | "sparkles" | "leaf" | "droplet" | "pill" | "user";
+  icon: "home" | "sparkles" | "leaf" | "droplet" | "pill" | "user" | "users" | "grid";
   description: string;
 };
 
@@ -27,22 +27,45 @@ export const primaryNav: NavItem[] = [
     description: "Plan nutritionnel personnalisé",
   },
   {
-    label: "Skincare",
-    href: "/skincare",
-    icon: "droplet",
-    description: "Routine peau matin et soir",
+    label: "Communauté",
+    href: "/communaute",
+    icon: "users",
+    description: "Articles et entraide entre membres",
   },
   {
-    label: "Compléments",
-    href: "/complements",
-    icon: "pill",
-    description: "Compléments courants et repères",
+    label: "Routine",
+    href: "/routine",
+    icon: "grid",
+    description: "Skincare, cheveux & barbe, compléments",
   },
   {
     label: "Compte",
     href: "/compte",
     icon: "user",
     description: "Historique et abonnement",
+  },
+];
+
+// Sous-pages regroupées sous le hub "Routine" (plus dans la barre de
+// navigation principale, gardent leurs routes existantes).
+export const routineNav = [
+  {
+    label: "Skincare",
+    href: "/skincare",
+    icon: "droplet" as const,
+    description: "Routine peau matin et soir",
+  },
+  {
+    label: "Cheveux & barbe",
+    href: "/cheveux-barbe",
+    icon: "scissors" as const,
+    description: "Forme de visage, coupe et taille de barbe",
+  },
+  {
+    label: "Compléments",
+    href: "/complements",
+    icon: "pill" as const,
+    description: "Compléments courants et repères",
   },
 ];
 

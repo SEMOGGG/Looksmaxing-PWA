@@ -19,12 +19,15 @@ const freeFeatures = [
   "1 bilan d'analyse par mois",
   "Plan nutrition simplifié",
   "Routine skincare de base",
+  "Lecture des articles de la communauté",
 ];
 
 const premiumFeatures = [
   "Bilans d'analyse illimités",
   "Plan nutrition détaillé avec macros",
   "Suivi photo comparatif dans le temps",
+  "Analyse capillaire détaillée (coupe & barbe)",
+  "Publier et commenter dans la communauté",
   "Support prioritaire",
 ];
 
