@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Space_Grotesk, Inter } from "next/font/google";
 import { AgeGate } from "@/components/age-gate";
+import { GrainOverlay } from "@/components/grain-overlay";
 import { PwaRegister } from "@/components/pwa-register";
 import { APP_NAME } from "@/lib/navigation";
 import "./globals.css";
@@ -47,6 +48,7 @@ export default function RootLayout({
     <html lang="fr" className={`${bodyFont.variable} ${headingFont.variable} h-full antialiased dark`}>
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <PwaRegister />
+        <GrainOverlay />
         <AgeGate />
         {children}
       </body>

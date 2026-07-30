@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { Logo } from "@/components/logo";
 import {
   ArrowRightIcon,
   CameraIcon,
@@ -69,15 +70,21 @@ export default function LandingPage() {
         <section className="relative px-5 pt-14 pb-16 sm:pt-20 sm:pb-24">
           <div
             aria-hidden
-            className="pointer-events-none absolute -top-24 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-accent opacity-25 blur-[100px] sm:h-[28rem] sm:w-[28rem]"
+            className="animate-drift pointer-events-none absolute -top-24 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-accent opacity-25 blur-[100px] sm:h-[28rem] sm:w-[28rem]"
           />
           <div
             aria-hidden
-            className="pointer-events-none absolute top-10 right-0 h-64 w-64 rounded-full bg-accent-2 opacity-20 blur-[100px]"
+            className="animate-drift-slow pointer-events-none absolute top-10 right-0 h-64 w-64 rounded-full bg-accent-2 opacity-20 blur-[100px]"
+          />
+          <Logo
+            idPrefix="hero-watermark"
+            aria-hidden
+            className="pointer-events-none absolute top-6 right-4 h-24 w-24 opacity-[0.08] sm:h-36 sm:w-36 sm:right-10"
           />
 
           <div className="relative mx-auto max-w-2xl text-center">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface/80 px-3 py-1 text-xs font-medium text-muted backdrop-blur">
+            <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface/80 px-3 py-1 text-xs font-medium text-muted backdrop-blur">
+              <Logo idPrefix="badge-logo" className="h-3.5 w-3.5" />
               Coaching apparence &amp; bien-être
             </span>
             <h1 className="font-heading mt-5 text-4xl font-semibold leading-tight tracking-tight text-foreground sm:text-6xl">
@@ -213,7 +220,12 @@ export default function LandingPage() {
         {/* CTA final */}
         <section className="mx-auto w-full max-w-5xl px-5 py-16 sm:py-20">
           <div className="bg-gradient-accent glow relative overflow-hidden rounded-3xl px-6 py-12 text-center sm:px-12">
-            <h2 className="font-heading text-2xl font-semibold text-white sm:text-3xl">
+            <Logo
+              idPrefix="cta-watermark"
+              aria-hidden
+              className="pointer-events-none absolute -top-6 -right-6 h-24 w-24 opacity-20 mix-blend-overlay sm:h-56 sm:w-56"
+            />
+            <h2 className="font-heading relative text-2xl font-semibold text-white sm:text-3xl">
               Prêt·e à prendre soin de vous, sans pression ?
             </h2>
             <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-white/80 sm:text-base">
