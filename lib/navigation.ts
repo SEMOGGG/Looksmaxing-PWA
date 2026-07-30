@@ -5,7 +5,7 @@
 export type NavItem = {
   label: string;
   href: string;
-  icon: "home" | "sparkles" | "leaf" | "droplet" | "pill" | "user" | "users" | "grid";
+  icon: "home" | "sparkles" | "leaf" | "droplet" | "pill" | "user" | "users" | "grid" | "message";
   description: string;
 };
 
@@ -25,6 +25,12 @@ export const primaryNav: NavItem[] = [
     href: "/nutrition",
     icon: "leaf",
     description: "Plan nutritionnel personnalisé",
+  },
+  {
+    label: "Coach IA",
+    href: "/coach",
+    icon: "message",
+    description: "Posez vos questions, recevez des conseils au quotidien",
   },
   {
     label: "Communauté",

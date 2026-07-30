@@ -183,6 +183,7 @@ const iconMap = {
   users: UsersIcon,
   grid: GridIcon,
   scissors: ScissorsIcon,
+  message: MessageIcon,
 };
 
 export function NavIcon({

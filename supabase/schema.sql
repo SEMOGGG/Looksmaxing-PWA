@@ -129,3 +129,22 @@ create table if not exists user_profiles (
 alter table user_profiles enable row level security;
 -- Aucune policy pour le rôle "anon" : cette table n'est lue/écrite que par
 -- les Server Actions (clé secrète), jamais directement depuis le navigateur.
+
+-- Historique du Coach IA, une ligne par message (utilisateur ou assistant).
+-- Sert à la fois de mémoire de conversation (contexte envoyé au modèle,
+-- borné aux derniers messages) et de compteur pour la limite quotienne
+-- (comptage des messages "user" du jour, plutôt qu'une table de quota à
+-- part qui pourrait se désynchroniser).
+create table if not exists coach_messages (
+  id uuid primary key default gen_random_uuid(),
+  user_id text not null,             -- Clerk user id
+  role text not null check (role in ('user', 'assistant')),
+  content text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists coach_messages_user_idx on coach_messages (user_id, created_at asc);
+
+alter table coach_messages enable row level security;
+-- Aucune policy pour le rôle "anon" : lu/écrit uniquement par la Server
+-- Action app/actions/coach.ts, après vérification Clerk + statut Premium.

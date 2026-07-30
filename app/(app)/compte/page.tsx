@@ -23,6 +23,7 @@ const freeFeatures = [
 ];
 
 const premiumFeatures = [
+  "Coach IA disponible au quotidien",
   "Bilans d'analyse illimités",
   "Plan nutrition détaillé avec macros",
   "Suivi photo comparatif dans le temps",
