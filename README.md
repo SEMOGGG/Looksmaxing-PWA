@@ -33,7 +33,7 @@ Ouvrez [http://localhost:3000](http://localhost:3000).
 - [x] Structure de navigation générale (header, footer, garde d'âge, config
       de nav pour la barre mobile à venir)
 - [x] Landing page (présentation, vérification d'âge 18+, disclaimer)
-- [ ] Onboarding (upload photo + consentement RGPD, formulaire profil)
+- [x] Onboarding (upload photo + consentement RGPD, formulaire profil)
 - [ ] Résultats d'analyse
 - [ ] Plan nutritionnel (TDEE, macros, activité)
 - [ ] Routine skincare
