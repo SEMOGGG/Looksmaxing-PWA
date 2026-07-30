@@ -128,6 +128,11 @@ export default function NutritionPage() {
               <span className="text-muted">{targets.fatG} g · {fatPct}%</span>
             </div>
           </div>
+          <p className="mt-4 text-xs leading-relaxed text-muted">
+            Protéines calculées à {targets.proteinPerKg.toFixed(1)} g par kg de poids
+            de corps, ajustées à votre niveau d&rsquo;activité (1,8 g/kg minimum,
+            jusqu&rsquo;à 2,0-2,2 g/kg pour les niveaux les plus actifs).
+          </p>
         </div>
 
         <label className="mt-4 block rounded-2xl border border-border bg-surface p-5">

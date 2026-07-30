@@ -27,9 +27,20 @@ export type NutritionTargets = {
   tdee: number;
   calories: number;
   proteinG: number;
+  proteinPerKg: number;
   carbsG: number;
   fatG: number;
   adjustment: "deficit" | "surplus" | "maintien";
+};
+
+// Apport protéique par kg de poids de corps : un minimum de 1,8 g/kg, monté
+// jusqu'à 2,0-2,2 g/kg pour les niveaux d'activité les plus élevés.
+const PROTEIN_PER_KG: Record<NonNullable<OnboardingData["activityLevel"]>, number> = {
+  sedentaire: 1.8,
+  leger: 1.8,
+  modere: 1.9,
+  actif: 2.0,
+  tres_actif: 2.2,
 };
 
 export function calculateTargets(profile: OnboardingData): NutritionTargets {
@@ -47,7 +58,8 @@ export function calculateTargets(profile: OnboardingData): NutritionTargets {
   }
 
   const weight = parseFloat(profile.weightKg) || 70;
-  const proteinG = Math.round(weight * 1.8);
+  const proteinPerKg = profile.activityLevel ? PROTEIN_PER_KG[profile.activityLevel] : 1.8;
+  const proteinG = Math.round(weight * proteinPerKg);
   const proteinCal = proteinG * 4;
   const fatCal = calories * 0.27;
   const fatG = Math.round(fatCal / 9);
@@ -59,6 +71,7 @@ export function calculateTargets(profile: OnboardingData): NutritionTargets {
     tdee: Math.round(tdee),
     calories: Math.round(calories / 10) * 10,
     proteinG,
+    proteinPerKg,
     fatG,
     carbsG,
     adjustment,

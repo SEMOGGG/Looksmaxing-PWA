@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import { AppTopBar } from "@/components/app-top-bar";
 import { DemoProfileBanner } from "@/components/demo-profile-banner";
 import { ProgressChart } from "@/components/progress-chart";
-import { CheckIcon } from "@/components/icons";
+import { CheckIcon, LockIcon } from "@/components/icons";
 import { demoProfile, type Goal } from "@/lib/onboarding";
 import { loadProfile } from "@/lib/profile-store";
 import { generateAnalysis } from "@/lib/analysis";
+import { loadPlan, savePlan, type Plan } from "@/lib/subscription-store";
 
 const pastEntries = [
   { label: "15 mai", date: "15 mai 2026", score: 64 },
@@ -29,19 +30,28 @@ const premiumFeatures = [
 
 export default function ComptePage() {
   const [goals, setGoals] = useState<Goal[]>(demoProfile.goals);
+  const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
   const [isDemo, setIsDemo] = useState(false);
+  const [plan, setPlan] = useState<Plan>("free");
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const saved = loadProfile();
     if (saved) {
       setGoals(saved.goals);
+      setPhotoDataUrl(saved.photoDataUrl);
       setIsDemo(false);
     } else {
       setIsDemo(true);
     }
+    setPlan(loadPlan());
     setReady(true);
   }, []);
+
+  function handlePlanChange(next: Plan) {
+    savePlan(next);
+    setPlan(next);
+  }
 
   if (!ready) return null;
 
@@ -50,6 +60,7 @@ export default function ComptePage() {
     ...pastEntries,
     { label: "29 juil.", date: "29 juillet 2026", score: overallScore },
   ];
+  const isPremium = plan === "premium";
 
   return (
     <>
@@ -84,14 +95,54 @@ export default function ComptePage() {
           ))}
         </div>
 
+        <h2 className="mt-8 text-base font-semibold text-foreground">
+          Suivi photo comparatif
+        </h2>
+        {isPremium ? (
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            {["Photo initiale", "Aujourd'hui"].map((label) => (
+              <div
+                key={label}
+                className="rounded-2xl border border-border bg-surface p-3 text-center"
+              >
+                {photoDataUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={photoDataUrl}
+                    alt={label}
+                    className="aspect-square w-full rounded-xl object-cover"
+                  />
+                ) : (
+                  <div className="flex aspect-square w-full items-center justify-center rounded-xl bg-surface-muted text-xs text-muted">
+                    Pas de photo
+                  </div>
+                )}
+                <p className="mt-2 text-xs text-muted">{label}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-3 flex items-center gap-3 rounded-2xl border border-dashed border-border bg-surface p-5">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-muted text-muted">
+              <LockIcon className="h-5 w-5" />
+            </div>
+            <p className="text-sm text-muted">
+              Comparez vos photos dans le temps avec le plan{" "}
+              <span className="font-medium text-foreground">Premium</span>.
+            </p>
+          </div>
+        )}
+
         <h2 className="mt-8 text-base font-semibold text-foreground">Abonnement</h2>
         <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="rounded-2xl border border-border bg-surface p-5">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-semibold text-foreground">Gratuit</h3>
-              <span className="rounded-full bg-surface-muted px-2.5 py-1 text-xs font-medium text-muted">
-                Plan actuel
-              </span>
+              {!isPremium && (
+                <span className="rounded-full bg-surface-muted px-2.5 py-1 text-xs font-medium text-muted">
+                  Plan actuel
+                </span>
+              )}
             </div>
             <p className="font-heading mt-2 text-2xl font-semibold text-foreground">0€</p>
             <ul className="mt-4 flex flex-col gap-2 text-sm text-muted">
@@ -102,11 +153,20 @@ export default function ComptePage() {
                 </li>
               ))}
             </ul>
+            {isPremium && (
+              <button
+                type="button"
+                onClick={() => handlePlanChange("free")}
+                className="mt-5 w-full rounded-full border border-border px-5 py-3 text-sm font-medium text-foreground transition-colors hover:border-accent/50"
+              >
+                Repasser au plan gratuit
+              </button>
+            )}
           </div>
 
           <div className="glow relative rounded-2xl border border-accent/50 bg-surface p-5">
             <span className="bg-gradient-accent absolute -top-3 right-5 rounded-full px-3 py-1 text-xs font-semibold text-white">
-              Recommandé
+              {isPremium ? "Plan actuel" : "Recommandé"}
             </span>
             <h3 className="text-base font-semibold text-foreground">Premium</h3>
             <p className="font-heading mt-2 text-2xl font-semibold text-foreground">
@@ -120,12 +180,20 @@ export default function ComptePage() {
                 </li>
               ))}
             </ul>
-            <button
-              type="button"
-              className="bg-gradient-accent mt-5 w-full rounded-full px-5 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-            >
-              Passer au Premium
-            </button>
+            {isPremium ? (
+              <p className="mt-5 flex items-center justify-center gap-1.5 rounded-full bg-surface-muted px-5 py-3 text-sm font-medium text-foreground">
+                <CheckIcon className="h-4 w-4 text-accent-strong" />
+                Vous êtes Premium
+              </p>
+            ) : (
+              <button
+                type="button"
+                onClick={() => handlePlanChange("premium")}
+                className="bg-gradient-accent mt-5 w-full rounded-full px-5 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+              >
+                Passer au Premium
+              </button>
+            )}
             <p className="mt-2 text-center text-xs text-muted">
               Aperçu visuel — le paiement Stripe sera activé prochainement.
             </p>
