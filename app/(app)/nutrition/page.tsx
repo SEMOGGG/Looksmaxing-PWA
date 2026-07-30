@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { AppTopBar } from "@/components/app-top-bar";
 import { DemoProfileBanner } from "@/components/demo-profile-banner";
 import { HealthDisclaimer } from "@/components/health-disclaimer";
+import { LockIcon } from "@/components/icons";
 import { demoProfile, type OnboardingData } from "@/lib/onboarding";
 import { loadProfile, saveProfile } from "@/lib/profile-store";
 import { calculateTargets } from "@/lib/nutrition";
+import { loadPlan, type Plan } from "@/lib/subscription-store";
 
 const adjustmentCopy = {
   deficit: {
@@ -28,6 +31,7 @@ export default function NutritionPage() {
   const [isDemo, setIsDemo] = useState(false);
   const [ready, setReady] = useState(false);
   const [steps, setSteps] = useState("");
+  const [plan, setPlan] = useState<Plan>("free");
 
   useEffect(() => {
     const saved = loadProfile();
@@ -39,6 +43,7 @@ export default function NutritionPage() {
       setSteps(demoProfile.steps);
       setIsDemo(true);
     }
+    setPlan(loadPlan());
     setReady(true);
   }, []);
 
@@ -99,41 +104,61 @@ export default function NutritionPage() {
           <p className="mt-1 text-sm leading-relaxed text-muted">{adjustment.text}</p>
         </div>
 
-        <div className="mt-4 rounded-2xl border border-border bg-surface p-5">
-          <h2 className="text-base font-semibold text-foreground">
-            Répartition des macronutriments
-          </h2>
-          <div className="mt-4 flex h-3 overflow-hidden rounded-full">
-            <div className="bg-accent" style={{ width: `${proteinPct}%` }} />
-            <div className="bg-accent-2" style={{ width: `${carbsPct}%` }} />
-            <div className="bg-muted" style={{ width: `${fatPct}%` }} />
+        {plan === "premium" ? (
+          <div className="mt-4 rounded-2xl border border-border bg-surface p-5">
+            <h2 className="text-base font-semibold text-foreground">
+              Répartition des macronutriments
+            </h2>
+            <div className="mt-4 flex h-3 overflow-hidden rounded-full">
+              <div className="bg-accent" style={{ width: `${proteinPct}%` }} />
+              <div className="bg-accent-2" style={{ width: `${carbsPct}%` }} />
+              <div className="bg-muted" style={{ width: `${fatPct}%` }} />
+            </div>
+            <div className="mt-4 flex flex-col gap-2.5 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-2 text-foreground">
+                  <span className="h-2.5 w-2.5 rounded-full bg-accent" /> Protéines
+                </span>
+                <span className="text-muted">{targets.proteinG} g · {proteinPct}%</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-2 text-foreground">
+                  <span className="h-2.5 w-2.5 rounded-full bg-accent-2" /> Glucides
+                </span>
+                <span className="text-muted">{targets.carbsG} g · {carbsPct}%</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-2 text-foreground">
+                  <span className="h-2.5 w-2.5 rounded-full bg-muted" /> Lipides
+                </span>
+                <span className="text-muted">{targets.fatG} g · {fatPct}%</span>
+              </div>
+            </div>
+            <p className="mt-4 text-xs leading-relaxed text-muted">
+              Protéines calculées à {targets.proteinPerKg.toFixed(1)} g par kg de poids
+              de corps, ajustées à votre niveau d&rsquo;activité (1,8 g/kg minimum,
+              jusqu&rsquo;à 2,0-2,2 g/kg pour les niveaux les plus actifs).
+            </p>
           </div>
-          <div className="mt-4 flex flex-col gap-2.5 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-2 text-foreground">
-                <span className="h-2.5 w-2.5 rounded-full bg-accent" /> Protéines
-              </span>
-              <span className="text-muted">{targets.proteinG} g · {proteinPct}%</span>
+        ) : (
+          <div className="mt-4 flex items-start gap-3 rounded-2xl border border-dashed border-border bg-surface p-5">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-muted text-muted">
+              <LockIcon className="h-5 w-5" />
             </div>
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-2 text-foreground">
-                <span className="h-2.5 w-2.5 rounded-full bg-accent-2" /> Glucides
-              </span>
-              <span className="text-muted">{targets.carbsG} g · {carbsPct}%</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-2 text-foreground">
-                <span className="h-2.5 w-2.5 rounded-full bg-muted" /> Lipides
-              </span>
-              <span className="text-muted">{targets.fatG} g · {fatPct}%</span>
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                Répartition détaillée des macronutriments
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-muted">
+                Le plan gratuit affiche votre objectif calorique global. Passez au{" "}
+                <Link href="/compte" className="font-medium text-accent-strong underline underline-offset-2">
+                  plan Premium
+                </Link>{" "}
+                pour voir le détail protéines / glucides / lipides en grammes.
+              </p>
             </div>
           </div>
-          <p className="mt-4 text-xs leading-relaxed text-muted">
-            Protéines calculées à {targets.proteinPerKg.toFixed(1)} g par kg de poids
-            de corps, ajustées à votre niveau d&rsquo;activité (1,8 g/kg minimum,
-            jusqu&rsquo;à 2,0-2,2 g/kg pour les niveaux les plus actifs).
-          </p>
-        </div>
+        )}
 
         <label className="mt-4 block rounded-2xl border border-border bg-surface p-5">
           <span className="text-base font-semibold text-foreground">Pas quotidiens</span>

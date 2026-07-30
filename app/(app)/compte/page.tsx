@@ -71,28 +71,54 @@ export default function ComptePage() {
         <h2 className="mt-6 text-base font-semibold text-foreground">
           Votre progression
         </h2>
-        <div className="mt-3 rounded-2xl border border-border bg-surface p-5">
-          <ProgressChart
-            points={history.map((entry) => ({ label: entry.label, value: entry.score }))}
-          />
-        </div>
+        {isPremium ? (
+          <div className="mt-3 rounded-2xl border border-border bg-surface p-5">
+            <ProgressChart
+              points={history.map((entry) => ({ label: entry.label, value: entry.score }))}
+            />
+          </div>
+        ) : (
+          <div className="mt-3 flex items-center gap-3 rounded-2xl border border-dashed border-border bg-surface p-5">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-muted text-muted">
+              <LockIcon className="h-5 w-5" />
+            </div>
+            <p className="text-sm text-muted">
+              Le suivi de votre progression dans le temps est disponible avec le
+              plan <span className="font-medium text-foreground">Premium</span>.
+            </p>
+          </div>
+        )}
 
         <h2 className="mt-8 text-base font-semibold text-foreground">
           Historique des analyses
         </h2>
         <div className="mt-3 flex flex-col gap-2.5">
-          {[...history].reverse().map((entry) => (
-            <div
-              key={entry.date}
-              className="flex items-center justify-between rounded-2xl border border-border bg-surface p-4"
-            >
-              <span className="text-sm text-foreground">{entry.date}</span>
-              <span className="font-heading text-lg font-semibold text-accent-strong">
-                {entry.score}
-                <span className="text-xs font-normal text-muted"> /100</span>
-              </span>
+          {[...history]
+            .reverse()
+            .slice(0, isPremium ? undefined : 1)
+            .map((entry) => (
+              <div
+                key={entry.date}
+                className="flex items-center justify-between rounded-2xl border border-border bg-surface p-4"
+              >
+                <span className="text-sm text-foreground">{entry.date}</span>
+                <span className="font-heading text-lg font-semibold text-accent-strong">
+                  {entry.score}
+                  <span className="text-xs font-normal text-muted"> /100</span>
+                </span>
+              </div>
+            ))}
+          {!isPremium && (
+            <div className="flex items-center gap-3 rounded-2xl border border-dashed border-border bg-surface p-4">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-muted text-muted">
+                <LockIcon className="h-4 w-4" />
+              </div>
+              <p className="text-sm text-muted">
+                Le plan gratuit conserve 1 bilan par mois. Passez au Premium pour
+                un historique illimité.
+              </p>
             </div>
-          ))}
+          )}
         </div>
 
         <h2 className="mt-8 text-base font-semibold text-foreground">
