@@ -20,10 +20,10 @@ const limiters = {
   coachMessage: redis ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(10, "60 s") }) : null,
   // Publications/commentaires Communauté.
   communityWrite: redis ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(10, "60 s") }) : null,
-  // Analyses par photo (corps/peau) : la base impose déjà 1 par 24h, ceci
-  // évite surtout une double soumission concurrente de contourner ce
-  // contrôle par une condition de course.
-  photoAnalysis: redis ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(3, "3600 s") }) : null,
+  // Analyses par photo (corps/peau) : le vrai plafond est le budget
+  // mensuel partagé (lib/ai-usage.ts), pas ce compteur — ceci absorbe
+  // juste une rafale de requêtes rapprochées.
+  photoAnalysis: redis ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(10, "3600 s") }) : null,
   // Sauvegarde de profil/plan/forme de visage.
   profileWrite: redis ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(20, "60 s") }) : null,
 } as const;

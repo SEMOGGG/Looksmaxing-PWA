@@ -5,13 +5,17 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { getUserData } from "@/app/actions/user-data";
 import { photoDataUrlSchema } from "@/lib/validation";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { getMonthlyAiCostUsd, MONTHLY_AI_BUDGET_USD } from "@/lib/ai-usage";
 
-// Modèle plus capable que le Coach IA (Sonnet plutôt que Haiku) : l'analyse
-// visuelle est un usage ponctuel (1 par 24h, pas un chat), donc un coût
-// unitaire plus élevé est raisonnable pour une meilleure qualité de lecture
-// d'image.
+// Modèle plus capable que le Coach IA (Sonnet plutôt que Haiku) pour une
+// meilleure qualité de lecture d'image. Le coût réel est encadré par le
+// budget mensuel partagé (lib/ai-usage.ts), pas par une limite de nombre
+// d'analyses par jour.
 const BODY_ANALYSIS_MODEL = "claude-sonnet-5";
-const ANALYSIS_COOLDOWN_HOURS = 24;
+
+// Anti double-soumission (double-clic, requêtes concurrentes), pas une
+// vraie limite produit.
+const RESUBMIT_COOLDOWN_SECONDS = 30;
 
 export type BodyAnalysisResult = {
   rangeLow: number | null;
@@ -68,9 +72,18 @@ export async function analyzeBodyComposition(
   const { plan } = await getUserData();
   if (plan !== "premium") return { ok: false, error: "Fonctionnalité réservée aux membres Premium." };
 
+  const monthlyCost = await getMonthlyAiCostUsd(userId);
+  if (monthlyCost >= MONTHLY_AI_BUDGET_USD) {
+    return {
+      ok: false,
+      error:
+        "Le Coach IA et les analyses par photo ont atteint leur plafond d'usage pour ce mois-ci. Ça redevient disponible le mois prochain.",
+    };
+  }
+
   const supabase = getSupabaseServerClient();
 
-  const cooldownStart = new Date(Date.now() - ANALYSIS_COOLDOWN_HOURS * 60 * 60 * 1000);
+  const cooldownStart = new Date(Date.now() - RESUBMIT_COOLDOWN_SECONDS * 1000);
   const { data: recent } = await supabase
     .from("body_analyses")
     .select("id")
@@ -79,7 +92,7 @@ export async function analyzeBodyComposition(
     .limit(1);
 
   if (recent && recent.length > 0) {
-    return { ok: false, error: "Une estimation par 24h maximum. Réessayez plus tard." };
+    return { ok: false, error: "Une analyse est déjà en cours, patientez quelques secondes." };
   }
 
   const parsedPhoto = photoDataUrlSchema.safeParse(photoDataUrl);
@@ -122,7 +135,8 @@ export async function analyzeBodyComposition(
     return { ok: false, error: "Analyse indisponible pour le moment, réessayez plus tard." };
   }
 
-  const data: { content: TextBlock[] } = await response.json();
+  const data: { content: TextBlock[]; usage?: { input_tokens?: number; output_tokens?: number } } =
+    await response.json();
   const text = data.content?.find((block) => block.type === "text")?.text ?? "";
 
   let parsed: { rangeLow: number | null; rangeHigh: number | null; notes: string };
@@ -137,6 +151,8 @@ export async function analyzeBodyComposition(
     range_low: parsed.rangeLow,
     range_high: parsed.rangeHigh,
     notes: parsed.notes,
+    input_tokens: data.usage?.input_tokens ?? 0,
+    output_tokens: data.usage?.output_tokens ?? 0,
   });
   if (error) return { ok: false, error: "Une erreur est survenue lors de l'enregistrement." };
 

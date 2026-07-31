@@ -68,12 +68,15 @@ automatiquement au premier chargement si la table est vide (voir
 `seedIfEmpty` dans `app/(app)/communaute/actions.ts`).
 
 Le Coach IA (`/coach`, Premium) utilise Claude Haiku avec un outil de
-recherche nutritionnelle (USDA FoodData Central), un garde-fou de 200
-messages/jour par membre, et surtout un **budget mensuel réel de 2,50$
-par membre** calculé sur les tokens effectivement facturés par l'API
-(voir `getMonthlyUsageCostUsd` dans `app/actions/coach.ts`) — le nombre de
-messages seul ne suffit pas à garantir un plafond en euros, donc le
-budget se base sur l'usage facturé, pas sur un simple comptage.
+recherche nutritionnelle (USDA FoodData Central) et un garde-fou de 200
+messages/jour par membre. Les analyses par photo (composition corporelle,
+peau) utilisent Claude Sonnet, sans limite de nombre par jour. Le vrai
+plafond de coût est un **budget mensuel réel de 2,50$ par membre, partagé
+entre le Coach IA et les analyses par photo**, calculé sur les tokens
+effectivement facturés par l'API (voir `getMonthlyAiCostUsd` dans
+`lib/ai-usage.ts`) — un nombre de messages ou d'analyses par jour ne
+suffit pas à garantir un plafond en euros, donc le budget se base sur
+l'usage facturé, pas sur un simple comptage.
 
 ## Structure
 
@@ -87,12 +90,14 @@ budget se base sur l'usage facturé, pas sur un simple comptage.
 - `app/(app)/communaute/actions.ts` — Server Actions de la Communauté
   (lecture/écriture Supabase, vérification Clerk, modération)
 - `app/actions/coach.ts` — Server Actions du Coach IA (vérification Premium,
-  quota quotidien, budget mensuel réel, boucle d'outils, appel à l'API
-  Claude, persistance de l'historique)
+  quota quotidien, budget mensuel, boucle d'outils, appel à l'API Claude,
+  persistance de l'historique)
+- `lib/ai-usage.ts` — budget mensuel réel partagé entre le Coach IA et les
+  analyses par photo, calculé sur les tokens facturés par l'API
 - `app/actions/weight.ts` — Server Actions du suivi de poids
 - `app/actions/body-analysis.ts` / `app/actions/skin-analysis.ts` —
-  Server Actions des estimations par photo (Premium, 1 par 24h, photo non
-  conservée)
+  Server Actions des estimations par photo (Premium, encadrées par le
+  budget mensuel partagé, photo jamais conservée)
 - `lib/food-data.ts` — recherche de valeurs nutritionnelles réelles via
   l'API USDA FoodData Central (outil du Coach IA)
 - `lib/validation.ts` — schémas Zod utilisés par toutes les Server Actions

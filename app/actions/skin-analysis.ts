@@ -6,12 +6,16 @@ import { getUserData } from "@/app/actions/user-data";
 import { skincareIngredients } from "@/lib/skincare";
 import { photoDataUrlSchema } from "@/lib/validation";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { getMonthlyAiCostUsd, MONTHLY_AI_BUDGET_USD } from "@/lib/ai-usage";
 
 // Même logique que l'estimation de composition corporelle : modèle plus
-// capable (usage ponctuel, pas un chat), 1 analyse par 24h, aucune
+// capable (usage ponctuel), coût réel encadré par le budget mensuel
+// partagé plutôt que par un nombre d'analyses par jour. Aucune
 // conservation de la photo.
 const SKIN_ANALYSIS_MODEL = "claude-sonnet-5";
-const ANALYSIS_COOLDOWN_HOURS = 24;
+
+// Anti double-soumission, pas une vraie limite produit.
+const RESUBMIT_COOLDOWN_SECONDS = 30;
 
 export type SkinAnalysisResult = {
   points: string[];
@@ -78,9 +82,18 @@ export async function analyzeSkin(
   const { plan } = await getUserData();
   if (plan !== "premium") return { ok: false, error: "Fonctionnalité réservée aux membres Premium." };
 
+  const monthlyCost = await getMonthlyAiCostUsd(userId);
+  if (monthlyCost >= MONTHLY_AI_BUDGET_USD) {
+    return {
+      ok: false,
+      error:
+        "Le Coach IA et les analyses par photo ont atteint leur plafond d'usage pour ce mois-ci. Ça redevient disponible le mois prochain.",
+    };
+  }
+
   const supabase = getSupabaseServerClient();
 
-  const cooldownStart = new Date(Date.now() - ANALYSIS_COOLDOWN_HOURS * 60 * 60 * 1000);
+  const cooldownStart = new Date(Date.now() - RESUBMIT_COOLDOWN_SECONDS * 1000);
   const { data: recent } = await supabase
     .from("skin_analyses")
     .select("id")
@@ -89,7 +102,7 @@ export async function analyzeSkin(
     .limit(1);
 
   if (recent && recent.length > 0) {
-    return { ok: false, error: "Une analyse par 24h maximum. Réessayez plus tard." };
+    return { ok: false, error: "Une analyse est déjà en cours, patientez quelques secondes." };
   }
 
   const parsedPhoto = photoDataUrlSchema.safeParse(photoDataUrl);
@@ -132,7 +145,8 @@ export async function analyzeSkin(
     return { ok: false, error: "Analyse indisponible pour le moment, réessayez plus tard." };
   }
 
-  const data: { content: TextBlock[] } = await response.json();
+  const data: { content: TextBlock[]; usage?: { input_tokens?: number; output_tokens?: number } } =
+    await response.json();
   const text = data.content?.find((block) => block.type === "text")?.text ?? "";
 
   let parsed: { points: string[]; recommendedIngredients: string[]; notes: string };
@@ -147,6 +161,8 @@ export async function analyzeSkin(
     points: parsed.points ?? [],
     recommended_ingredients: parsed.recommendedIngredients ?? [],
     notes: parsed.notes ?? "",
+    input_tokens: data.usage?.input_tokens ?? 0,
+    output_tokens: data.usage?.output_tokens ?? 0,
   });
   if (error) return { ok: false, error: "Une erreur est survenue lors de l'enregistrement." };
 

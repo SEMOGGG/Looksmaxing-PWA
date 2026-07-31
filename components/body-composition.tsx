@@ -115,7 +115,7 @@ export function BodyComposition({ isPremium }: { isPremium: boolean }) {
             <span className="text-sm font-medium text-foreground">
               {analyzing ? "Analyse en cours…" : "Envoyer une photo"}
             </span>
-            <span className="text-xs text-muted">1 estimation par 24h maximum</span>
+            <span className="text-xs text-muted">Inclus dans votre abonnement Premium</span>
           </button>
           <input
             ref={inputRef}

@@ -172,17 +172,25 @@ alter table weight_entries enable row level security;
 -- Aucune policy pour le rôle "anon" : lu/écrit uniquement par les Server
 -- Actions serveur, après vérification Clerk.
 
--- Estimations de composition corporelle par photo (Premium, 1 par 24h).
--- La photo elle-même n'est jamais stockée : seule l'estimation renvoyée
--- par le modèle est conservée.
+-- Estimations de composition corporelle par photo (Premium, encadrées par
+-- le budget mensuel partagé, voir lib/ai-usage.ts). La photo elle-même
+-- n'est jamais stockée : seule l'estimation renvoyée par le modèle est
+-- conservée, avec les tokens facturés pour le calcul du budget.
 create table if not exists body_analyses (
   id uuid primary key default gen_random_uuid(),
   user_id text not null,
   range_low numeric,
   range_high numeric,
   notes text,
+  input_tokens integer,
+  output_tokens integer,
   created_at timestamptz not null default now()
 );
+
+-- Si la table existait déjà sans ces colonnes (version précédente du
+-- schéma), on les ajoute sans toucher aux données existantes.
+alter table body_analyses add column if not exists input_tokens integer;
+alter table body_analyses add column if not exists output_tokens integer;
 
 create index if not exists body_analyses_user_idx on body_analyses (user_id, created_at desc);
 
@@ -190,16 +198,21 @@ alter table body_analyses enable row level security;
 -- Aucune policy pour le rôle "anon" : lu/écrit uniquement par les Server
 -- Actions serveur, après vérification Clerk + statut Premium.
 
--- Analyses de peau par photo (Premium, 1 par 24h). Comme pour
--- body_analyses, la photo n'est jamais stockée.
+-- Analyses de peau par photo (Premium, même logique que body_analyses :
+-- budget mensuel partagé, photo jamais stockée).
 create table if not exists skin_analyses (
   id uuid primary key default gen_random_uuid(),
   user_id text not null,
   points text[] not null default '{}',
   recommended_ingredients text[] not null default '{}',
   notes text,
+  input_tokens integer,
+  output_tokens integer,
   created_at timestamptz not null default now()
 );
+
+alter table skin_analyses add column if not exists input_tokens integer;
+alter table skin_analyses add column if not exists output_tokens integer;
 
 create index if not exists skin_analyses_user_idx on skin_analyses (user_id, created_at desc);
 

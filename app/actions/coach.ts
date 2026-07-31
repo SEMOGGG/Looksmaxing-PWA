@@ -5,6 +5,7 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { getUserData } from "@/app/actions/user-data";
 import { lookupFoodNutrition } from "@/lib/food-data";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { getMonthlyAiCostUsd, MONTHLY_AI_BUDGET_USD } from "@/lib/ai-usage";
 import {
   COACH_MODEL,
   COACH_SYSTEM_PROMPT,
@@ -13,9 +14,6 @@ import {
   MAX_DAILY_MESSAGES,
   MAX_MESSAGE_LENGTH,
   MAX_REPLY_TOKENS,
-  MONTHLY_BUDGET_USD,
-  PRICE_PER_MTOK_INPUT_USD,
-  PRICE_PER_MTOK_OUTPUT_USD,
   type CoachMessage,
 } from "@/lib/coach";
 
@@ -43,37 +41,6 @@ export async function getCoachHistory(): Promise<CoachMessage[]> {
     .limit(50);
 
   return (data ?? []).map(rowToMessage);
-}
-
-// Coût estimé du mois calendaire en cours pour ce membre, à partir des
-// tokens réellement facturés par l'API (stockés sur chaque réponse de
-// l'assistant). C'est ce chiffre, pas le nombre de messages, qui garantit
-// un plafond en euros par client.
-async function getMonthlyUsageCostUsd(userId: string): Promise<number> {
-  const startOfMonth = new Date();
-  startOfMonth.setUTCDate(1);
-  startOfMonth.setUTCHours(0, 0, 0, 0);
-
-  const supabase = getSupabaseServerClient();
-  const { data } = await supabase
-    .from("coach_messages")
-    .select("input_tokens, output_tokens")
-    .eq("user_id", userId)
-    .eq("role", "assistant")
-    .gte("created_at", startOfMonth.toISOString());
-
-  const totals = (data ?? []).reduce(
-    (acc, row) => ({
-      input: acc.input + (row.input_tokens ?? 0),
-      output: acc.output + (row.output_tokens ?? 0),
-    }),
-    { input: 0, output: 0 }
-  );
-
-  return (
-    (totals.input / 1_000_000) * PRICE_PER_MTOK_INPUT_USD +
-    (totals.output / 1_000_000) * PRICE_PER_MTOK_OUTPUT_USD
-  );
 }
 
 type ContentBlock =
@@ -187,11 +154,12 @@ export async function sendCoachMessage(
     return { ok: false, error: "Le Coach IA est réservé aux membres Premium." };
   }
 
-  const monthlyCost = await getMonthlyUsageCostUsd(userId);
-  if (monthlyCost >= MONTHLY_BUDGET_USD) {
+  const monthlyCost = await getMonthlyAiCostUsd(userId);
+  if (monthlyCost >= MONTHLY_AI_BUDGET_USD) {
     return {
       ok: false,
-      error: "Le Coach IA a atteint son plafond d'usage pour ce mois-ci. Il redevient disponible le mois prochain.",
+      error:
+        "Le Coach IA et les analyses par photo ont atteint leur plafond d'usage pour ce mois-ci. Ça redevient disponible le mois prochain.",
     };
   }
 

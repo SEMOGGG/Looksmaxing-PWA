@@ -127,7 +127,7 @@ export function SkinAnalysis({ isPremium }: { isPremium: boolean }) {
             <span className="text-sm font-medium text-foreground">
               {analyzing ? "Analyse en cours…" : "Envoyer une photo de mon visage"}
             </span>
-            <span className="text-xs text-muted">1 analyse par 24h maximum</span>
+            <span className="text-xs text-muted">Inclus dans votre abonnement Premium</span>
           </button>
           <input
             ref={inputRef}

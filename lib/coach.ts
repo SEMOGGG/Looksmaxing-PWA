@@ -34,16 +34,9 @@ export const MAX_DAILY_MESSAGES = 200;
 
 export const MAX_MESSAGE_LENGTH = 2000;
 
-// Tarifs Claude Haiku arrondis au-dessus de la réalité, pour garder une
-// marge de sécurité dans l'estimation de coût plutôt que de la sous-évaluer.
-export const PRICE_PER_MTOK_INPUT_USD = 1;
-export const PRICE_PER_MTOK_OUTPUT_USD = 5;
-
-// Budget mensuel maximum par membre, avec marge sous l'objectif de 3€ pour
-// absorber les approximations de conversion et de tarif. Une fois ce
-// plafond atteint, le Coach IA se met en pause jusqu'au mois suivant plutôt
-// que de continuer à générer des coûts.
-export const MONTHLY_BUDGET_USD = 2.5;
+// Le budget mensuel réel (tarifs + plafond) vit dans lib/ai-usage.ts,
+// partagé avec les analyses par photo — voir MONTHLY_AI_BUDGET_USD et
+// getMonthlyAiCostUsd.
 
 // Outil branché sur l'API publique USDA FoodData Central (voir
 // lib/food-data.ts), pour que les questions de composition nutritionnelle
