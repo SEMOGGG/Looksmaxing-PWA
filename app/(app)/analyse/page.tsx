@@ -7,30 +7,55 @@ import { DemoProfileBanner } from "@/components/demo-profile-banner";
 import { HealthDisclaimer } from "@/components/health-disclaimer";
 import { ScoreRing } from "@/components/score-ring";
 import { ArrowRightIcon, CheckIcon, SparklesIcon } from "@/components/icons";
-import { demoProfile, type Goal } from "@/lib/onboarding";
+import { demoProfile } from "@/lib/onboarding";
 import { getUserData } from "@/app/actions/user-data";
-import { generateAnalysis } from "@/lib/analysis";
+import { getLatestBilan, generateBilan } from "@/app/actions/bilan";
+import { generateAnalysis, type AnalysisResult } from "@/lib/analysis";
 
 export default function AnalysePage() {
   const [isDemo, setIsDemo] = useState(false);
-  const [goals, setGoals] = useState<Goal[]>(demoProfile.goals);
+  const [hasPhoto, setHasPhoto] = useState(false);
+  const [analysis, setAnalysis] = useState<AnalysisResult>(generateAnalysis(demoProfile.goals));
+  const [isAiBilan, setIsAiBilan] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    getUserData().then(({ profile }) => {
+    Promise.all([getUserData(), getLatestBilan()]).then(([{ profile }, bilan]) => {
       if (profile) {
-        setGoals(profile.goals);
+        setHasPhoto(Boolean(profile.photoDataUrl));
         setIsDemo(false);
       } else {
         setIsDemo(true);
+      }
+
+      if (bilan) {
+        setAnalysis({ overallScore: bilan.overallScore, categories: bilan.categories });
+        setIsAiBilan(true);
+      } else {
+        setAnalysis(generateAnalysis(profile?.goals ?? demoProfile.goals));
       }
       setReady(true);
     });
   }, []);
 
+  async function handleGenerate() {
+    setGenerating(true);
+    setError(null);
+    const result = await generateBilan();
+    setGenerating(false);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    setAnalysis({ overallScore: result.result.overallScore, categories: result.result.categories });
+    setIsAiBilan(true);
+  }
+
   if (!ready) return null;
 
-  const { overallScore, categories } = generateAnalysis(goals);
+  const { overallScore, categories } = analysis;
 
   return (
     <>
@@ -48,12 +73,47 @@ export default function AnalysePage() {
               Score global
             </h2>
             <p className="mt-1.5 text-sm leading-relaxed text-muted">
-              Une synthèse indicative de votre profil actuel. Elle évoluera au fil
-              de vos prochains bilans, pas de comparaison avec qui que ce soit
-              d&rsquo;autre.
+              {isAiBilan
+                ? "Généré par IA à partir de votre photo de profil."
+                : "Estimation basée sur vos objectifs, pas encore sur votre photo."}{" "}
+              Elle évoluera au fil de vos prochains bilans, pas de comparaison avec qui
+              que ce soit d&rsquo;autre.
             </p>
           </div>
         </div>
+
+        {!isDemo && (
+          <div className="mt-4 rounded-2xl border border-dashed border-border bg-surface p-5">
+            {hasPhoto ? (
+              <>
+                <button
+                  type="button"
+                  onClick={handleGenerate}
+                  disabled={generating}
+                  className="bg-gradient-accent w-full rounded-full px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
+                >
+                  {generating
+                    ? "Analyse en cours…"
+                    : isAiBilan
+                      ? "Régénérer mon bilan avec IA"
+                      : "Générer mon bilan personnalisé avec IA"}
+                </button>
+                <p className="mt-2 text-xs text-muted">
+                  Gratuit : 1 bilan IA par mois. Premium : illimité.
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-muted">
+                <Link href="/onboarding" className="font-medium text-accent-strong underline underline-offset-2">
+                  Ajoutez une photo à votre profil
+                </Link>{" "}
+                pour que votre bilan soit basé sur une vraie analyse IA plutôt que sur une
+                estimation générale.
+              </p>
+            )}
+            {error && <p className="mt-2 text-xs text-danger">{error}</p>}
+          </div>
+        )}
 
         <h3 className="mt-8 text-sm font-semibold tracking-wide text-muted uppercase">
           Le détail par catégorie

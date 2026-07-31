@@ -219,3 +219,24 @@ create index if not exists skin_analyses_user_idx on skin_analyses (user_id, cre
 alter table skin_analyses enable row level security;
 -- Aucune policy pour le rôle "anon" : lu/écrit uniquement par les Server
 -- Actions serveur, après vérification Clerk + statut Premium.
+
+-- Bilan Analyse (score global + catégories) généré par Claude vision à
+-- partir de la photo de profil. Gratuit : 1 génération par mois civil.
+-- Premium : illimité, dans les limites du budget mensuel partagé
+-- (lib/ai-usage.ts). Si la personne n'a pas de photo, l'app retombe sur
+-- le bilan mock basé sur les objectifs (lib/analysis.ts).
+create table if not exists bilans (
+  id uuid primary key default gen_random_uuid(),
+  user_id text not null,
+  overall_score integer not null,
+  categories jsonb not null,
+  input_tokens integer,
+  output_tokens integer,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists bilans_user_idx on bilans (user_id, created_at desc);
+
+alter table bilans enable row level security;
+-- Aucune policy pour le rôle "anon" : lu/écrit uniquement par les Server
+-- Actions serveur, après vérification Clerk + statut Premium.

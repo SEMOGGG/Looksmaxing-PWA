@@ -87,6 +87,10 @@ l'usage facturé, pas sur un simple comptage.
 - `app/actions/user-data.ts` — Server Actions du profil utilisateur
   (lecture/écriture Supabase, vérification Clerk) : `getUserData`,
   `saveUserProfile`, `saveUserPlan`, `saveFaceShapeData`
+- `app/actions/bilan.ts` — bilan Analyse (score + catégories) généré par
+  Claude vision à partir de la photo de profil : 1/mois gratuit, illimité
+  Premium (dans le budget partagé) ; retombe sur le bilan mock
+  (`lib/analysis.ts`) si la personne n'a pas de photo
 - `app/(app)/communaute/actions.ts` — Server Actions de la Communauté
   (lecture/écriture Supabase, vérification Clerk, modération)
 - `app/actions/coach.ts` — Server Actions du Coach IA (vérification Premium,
@@ -120,7 +124,8 @@ l'usage facturé, pas sur un simple comptage.
 - `lib/onboarding.ts` — types et options du profil (sexe, activité, objectifs)
 - `lib/user-data.ts` — type `Plan`, partagé entre Server Actions et pages
 - `lib/nutrition.ts` — calcul BMR/TDEE (Mifflin-St Jeor) et macros
-- `lib/analysis.ts` — génération du bilan mock à partir des objectifs choisis
+- `lib/analysis.ts` — bilan mock (fallback quand la personne n'a pas de
+  photo), à partir des objectifs choisis
 - `lib/hair.ts` — formes de visage et recommandations coupe/barbe
 - `lib/community.ts` — contenu éditorial, types et modération (partagé
   client/serveur — aucun accès Supabase ici)
@@ -141,6 +146,9 @@ l'usage facturé, pas sur un simple comptage.
       réservée au Premium, modération par mots-clés (à remplacer par un
       vrai modèle de modération IA), backend réel Clerk + Supabase
 - [x] Mentions légales, confidentialité, conditions d'utilisation
+- [x] Bilan Analyse (score + points forts/axes de progression) généré par
+      Claude vision à partir de la photo de profil — 1/mois gratuit,
+      illimité Premium ; bilan mock en repli si pas de photo
 - [x] Coach IA (Premium) : chat avec Claude Haiku + recherche nutritionnelle
       réelle (USDA), garde-fous santé/sécurité, programmes d'entraînement
       personnalisés, conseils produits — budget mensuel réel par membre
