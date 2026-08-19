@@ -126,32 +126,6 @@ export default function ComptePage() {
           </div>
         )}
 
-        {isPremium && history.length > 1 && (
-          <>
-            <h2 className="mt-8 text-base font-semibold text-foreground">
-              Évolution depuis votre dernier bilan
-            </h2>
-            <div className="mt-3 flex flex-col gap-2.5">
-              {history[0].categories.map((category) => {
-                const previousScore = history[1].categories.find((c) => c.key === category.key)?.score;
-                if (previousScore === undefined) return null;
-                const diff = category.score - previousScore;
-                const diffLabel = diff > 0 ? `+${diff}` : diff === 0 ? "Stable" : `${diff}`;
-                const diffClass = diff > 0 ? "text-success" : diff < 0 ? "text-danger" : "text-muted";
-                return (
-                  <div
-                    key={category.key}
-                    className="flex items-center justify-between rounded-2xl border border-border bg-surface p-4"
-                  >
-                    <span className="text-sm text-foreground">{category.label}</span>
-                    <span className={`text-sm font-semibold ${diffClass}`}>{diffLabel}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )}
-
         <h2 className="mt-8 text-base font-semibold text-foreground">
           Historique des analyses
         </h2>
@@ -198,36 +172,43 @@ export default function ComptePage() {
           Suivi photo comparatif
         </h2>
         {isPremium ? (
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            {[
-              {
-                label: bilansWithPhotos.length > 0 ? historyFullDate.format(new Date(bilansWithPhotos[bilansWithPhotos.length - 1].createdAt)) : "Photo initiale",
-                url: bilansWithPhotos.length > 0 ? bilansWithPhotos[bilansWithPhotos.length - 1].photoDataUrl : photoDataUrl,
-              },
-              {
-                label: bilansWithPhotos.length > 0 ? historyFullDate.format(new Date(bilansWithPhotos[0].createdAt)) : "Aujourd'hui",
-                url: bilansWithPhotos.length > 0 ? bilansWithPhotos[0].photoDataUrl : photoDataUrl,
-              },
-            ].map(({ label, url }) => (
-              <div
-                key={label}
-                className="rounded-2xl border border-border bg-surface p-3 text-center"
-              >
-                {url ? (
+          <div className="mt-3 flex items-center gap-4 rounded-2xl border border-border bg-surface p-4">
+            <div className="flex shrink-0 gap-2">
+              {[
+                bilansWithPhotos.length > 0 ? bilansWithPhotos[bilansWithPhotos.length - 1].photoDataUrl : photoDataUrl,
+                bilansWithPhotos.length > 0 ? bilansWithPhotos[0].photoDataUrl : photoDataUrl,
+              ].map((url, i) =>
+                url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
+                    key={i}
                     src={url}
-                    alt={label}
-                    className="aspect-square w-full rounded-xl object-cover"
+                    alt={i === 0 ? "Photo la plus ancienne" : "Photo la plus récente"}
+                    className="h-16 w-16 rounded-xl object-cover"
                   />
                 ) : (
-                  <div className="flex aspect-square w-full items-center justify-center rounded-xl bg-surface-muted text-xs text-muted">
-                    Pas de photo
+                  <div
+                    key={i}
+                    className="flex h-16 w-16 items-center justify-center rounded-xl bg-surface-muted text-xs text-muted"
+                  >
+                    —
                   </div>
-                )}
-                <p className="mt-2 text-xs text-muted">{label}</p>
-              </div>
-            ))}
+                )
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm text-foreground">
+                {bilansWithPhotos.length > 1
+                  ? `${bilansWithPhotos.length} photos enregistrées avec vos bilans.`
+                  : "Générez plusieurs bilans pour construire votre suivi photo."}
+              </p>
+              <Link
+                href="/suivi"
+                className="mt-1 inline-block text-sm font-medium text-accent-strong underline underline-offset-2"
+              >
+                Voir le suivi complet et mes conseils →
+              </Link>
+            </div>
           </div>
         ) : (
           <div className="mt-3 flex items-center gap-3 rounded-2xl border border-dashed border-border bg-surface p-5">
