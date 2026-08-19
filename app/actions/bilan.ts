@@ -235,7 +235,9 @@ export async function generateBilan(): Promise<{ ok: true; result: StoredBilan }
     input_tokens: data.usage?.input_tokens ?? 0,
     output_tokens: data.usage?.output_tokens ?? 0,
   });
-  if (error) return { ok: false, error: "Une erreur est survenue lors de l'enregistrement." };
+  if (error) {
+    return { ok: false, error: `Une erreur est survenue lors de l'enregistrement (${error.message}).` };
+  }
 
   return { ok: true, result: { overallScore, categories, createdAt: new Date().toISOString() } };
 }
