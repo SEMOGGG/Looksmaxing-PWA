@@ -155,12 +155,7 @@ export async function analyzeBodyComposition(
     input_tokens: data.usage?.input_tokens ?? 0,
     output_tokens: data.usage?.output_tokens ?? 0,
   });
-  if (error) {
-    return {
-      ok: false,
-      error: `Une erreur est survenue lors de l'enregistrement (${error.code ?? "?"} : ${error.message}).`,
-    };
-  }
+  if (error) return { ok: false, error: "Une erreur est survenue lors de l'enregistrement." };
 
   return {
     ok: true,
