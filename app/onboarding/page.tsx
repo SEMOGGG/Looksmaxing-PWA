@@ -12,7 +12,7 @@ import { StepGoals } from "@/components/onboarding/step-goals";
 import { StepSummary } from "@/components/onboarding/step-summary";
 import { StepAccount } from "@/components/onboarding/step-account";
 import { initialOnboardingData, type OnboardingData } from "@/lib/onboarding";
-import { getUserData, saveUserProfile } from "@/app/actions/user-data";
+import { saveUserProfile } from "@/app/actions/user-data";
 import { loadDraft, saveDraft, clearDraft } from "@/lib/onboarding-draft";
 
 const TOTAL_STEPS = 6;
@@ -58,24 +58,23 @@ export default function OnboardingPage() {
   // Dès que la dernière étape est atteinte et qu'un compte est actif
   // (nouvellement créé ou déjà existant), on enregistre le profil et on
   // continue — le composant StepAccount se charge seulement de proposer la
-  // connexion, pas d'en dépendre. Si la personne avait déjà un compte (elle
-  // s'est connectée ici plutôt que de recréer un compte), on ne réécrit
-  // jamais son profil existant avec les données de ce brouillon : on la
-  // renvoie directement vers son bilan. En cas d'échec (Supabase
-  // indisponible, etc.), on ne laisse jamais le spinner tourner
-  // indéfiniment : la personne voit une erreur avec un bouton pour réessayer.
+  // connexion, pas d'en dépendre. On enregistre toujours ce qui a été saisi,
+  // même si un profil existait déjà : /connexion est le point d'entrée dédié
+  // pour se connecter sans repasser par le formulaire, donc quelqu'un qui
+  // arrive ici a rempli le formulaire dans l'intention de créer ou mettre à
+  // jour son profil (nouvelle photo, nouvelles mensurations...), jamais par
+  // accident. En cas d'échec (Supabase indisponible, etc.), on ne laisse
+  // jamais le spinner tourner indéfiniment : la personne voit une erreur
+  // avec un bouton pour réessayer.
   async function persistAndContinue() {
     setSaving(true);
     setSaveError(null);
     try {
-      const { profile } = await getUserData();
-      if (!profile) {
-        const result = await saveUserProfile(data);
-        if (!result.ok) {
-          setSaving(false);
-          setSaveError(SAVE_ERROR_MESSAGES[result.reason] ?? SAVE_ERROR_MESSAGES.db);
-          return;
-        }
+      const result = await saveUserProfile(data);
+      if (!result.ok) {
+        setSaving(false);
+        setSaveError(SAVE_ERROR_MESSAGES[result.reason] ?? SAVE_ERROR_MESSAGES.db);
+        return;
       }
       clearDraft();
       router.push("/analyse");
