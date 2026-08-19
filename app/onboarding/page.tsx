@@ -42,9 +42,11 @@ export default function OnboardingPage() {
   // revient ici pour modifier une photo ou une info), on préremplit le
   // formulaire avec son profil existant plutôt que de repartir de zéro —
   // sinon il faudrait tout ressaisir juste pour changer une seule photo.
+  // Appelée sans attendre isLoaded/isSignedIn (comme sur les autres pages,
+  // ex. Compte) : getUserData() vérifie déjà la session côté serveur et
+  // renvoie simplement profile: null si personne n'est connecté — attendre
+  // le SDK Clerk client avant d'appeler ne fait qu'ajouter un délai inutile.
   useEffect(() => {
-    if (!isLoaded) return;
-
     const draft = loadDraft();
     if (draft) {
       setStep(draft.step);
@@ -53,17 +55,11 @@ export default function OnboardingPage() {
       return;
     }
 
-    if (!isSignedIn) {
-      setHydrated(true);
-      return;
-    }
-
     getUserData().then(({ profile }) => {
       if (profile) setData(profile);
       setHydrated(true);
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded, isSignedIn]);
+  }, []);
 
   // Ne jamais persister un brouillon tant que rien de réel n'a été saisi :
   // sinon, arriver sur l'étape 1 écrit aussitôt un brouillon vide qui, à la
