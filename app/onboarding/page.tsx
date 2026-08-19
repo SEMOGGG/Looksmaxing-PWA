@@ -12,7 +12,7 @@ import { StepGoals } from "@/components/onboarding/step-goals";
 import { StepSummary } from "@/components/onboarding/step-summary";
 import { StepAccount } from "@/components/onboarding/step-account";
 import { initialOnboardingData, type OnboardingData } from "@/lib/onboarding";
-import { saveUserProfile } from "@/app/actions/user-data";
+import { getUserData, saveUserProfile } from "@/app/actions/user-data";
 import { loadDraft, saveDraft, clearDraft } from "@/lib/onboarding-draft";
 
 const TOTAL_STEPS = 6;
@@ -48,13 +48,23 @@ export default function OnboardingPage() {
   // Dès que la dernière étape est atteinte et qu'un compte est actif
   // (nouvellement créé ou déjà existant), on enregistre le profil et on
   // continue — le composant StepAccount se charge seulement de proposer la
-  // connexion, pas d'en dépendre.
+  // connexion, pas d'en dépendre. Si la personne avait déjà un compte (elle
+  // s'est connectée ici plutôt que de recréer un compte), on ne réécrit
+  // jamais son profil existant avec les données de ce brouillon : on la
+  // renvoie directement vers son bilan.
   useEffect(() => {
     if (step !== TOTAL_STEPS || !isLoaded || !isSignedIn || saving) return;
     setSaving(true);
-    saveUserProfile(data).then(() => {
-      clearDraft();
-      router.push("/analyse");
+    getUserData().then(({ profile }) => {
+      if (profile) {
+        clearDraft();
+        router.push("/analyse");
+        return;
+      }
+      saveUserProfile(data).then(() => {
+        clearDraft();
+        router.push("/analyse");
+      });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, isLoaded, isSignedIn]);
