@@ -8,6 +8,11 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { getMonthlyAiCostUsd, MONTHLY_AI_BUDGET_USD } from "@/lib/ai-usage";
 import { extractJsonObject } from "@/lib/claude-json";
 
+// Analyser une photo peut dépasser la limite par défaut de 10s des fonctions
+// serverless Vercel (plan Hobby), qui coupe l'appel à Claude en plein milieu
+// (503) sans jamais atteindre le code d'erreur applicatif.
+export const maxDuration = 60;
+
 // Modèle plus capable que le Coach IA (Sonnet plutôt que Haiku) pour une
 // meilleure qualité de lecture d'image. Le coût réel est encadré par le
 // budget mensuel partagé (lib/ai-usage.ts), pas par une limite de nombre

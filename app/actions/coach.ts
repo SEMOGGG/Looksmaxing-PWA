@@ -17,6 +17,10 @@ import {
   type CoachMessage,
 } from "@/lib/coach";
 
+// La boucle d'outils (recherche USDA + appel à Claude) peut dépasser la
+// limite par défaut de 10s des fonctions serverless Vercel (plan Hobby).
+export const maxDuration = 60;
+
 type MessageRow = {
   id: string;
   role: "user" | "assistant";

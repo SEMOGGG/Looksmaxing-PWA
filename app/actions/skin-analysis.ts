@@ -9,6 +9,11 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { getMonthlyAiCostUsd, MONTHLY_AI_BUDGET_USD } from "@/lib/ai-usage";
 import { extractJsonObject } from "@/lib/claude-json";
 
+// Analyser une photo peut dépasser la limite par défaut de 10s des fonctions
+// serverless Vercel (plan Hobby), qui coupe l'appel à Claude en plein milieu
+// (503) sans jamais atteindre le code d'erreur applicatif.
+export const maxDuration = 60;
+
 // Même logique que l'estimation de composition corporelle : modèle plus
 // capable (usage ponctuel), coût réel encadré par le budget mensuel
 // partagé plutôt que par un nombre d'analyses par jour. Aucune
