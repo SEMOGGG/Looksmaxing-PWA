@@ -195,6 +195,46 @@ export async function generateBilan(
 
   const supabase = getSupabaseServerClient();
 
+  // Le paramètre `temperature` n'est plus accepté par ce modèle (voir plus
+  // bas), donc rien ne garantit plus au niveau de l'appel API que deux jeux
+  // de photos identiques produisent le même score d'une génération à
+  // l'autre. On garantit ça nous-mêmes : si les 3 photos utilisées pour ce
+  // bilan sont strictement identiques à celles du tout dernier bilan, on
+  // réutilise directement son résultat plutôt que de rappeler Claude — pas
+  // de dérive possible, et pas de coût ni de quota consommé pour rien.
+  const { data: latestRow } = await supabase
+    .from("bilans")
+    .select("overall_score, categories, photo_data_url, photo_profile_data_url, photo_body_data_url")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<BilanRow>();
+
+  if (
+    latestRow &&
+    latestRow.photo_data_url === photoDataUrl &&
+    latestRow.photo_profile_data_url === photoProfileDataUrl &&
+    latestRow.photo_body_data_url === photoBodyDataUrl
+  ) {
+    const { data: inserted, error: reuseError } = await supabase
+      .from("bilans")
+      .insert({
+        user_id: userId,
+        overall_score: latestRow.overall_score,
+        categories: latestRow.categories,
+        photo_data_url: photoDataUrl,
+        photo_profile_data_url: photoProfileDataUrl,
+        photo_body_data_url: photoBodyDataUrl,
+      })
+      .select("overall_score, categories, created_at, photo_data_url, photo_profile_data_url, photo_body_data_url")
+      .single<BilanRow>();
+
+    if (reuseError || !inserted) {
+      return { ok: false, error: "Impossible d'enregistrer le bilan, réessayez." };
+    }
+    return { ok: true, result: rowToStoredBilan(inserted) };
+  }
+
   if (plan === "premium") {
     const monthlyCost = await getMonthlyAiCostUsd(userId);
     if (monthlyCost >= MONTHLY_AI_BUDGET_USD) {
