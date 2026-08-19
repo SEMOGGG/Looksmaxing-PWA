@@ -248,12 +248,16 @@ export async function generateBilan(
         messages: [{ role: "user", content }],
       }),
     });
-  } catch {
-    return { ok: false, error: "Analyse indisponible pour le moment, réessayez plus tard." };
+  } catch (err) {
+    return { ok: false, error: `Analyse indisponible (réseau : ${String(err)}).` };
   }
 
   if (!response.ok) {
-    return { ok: false, error: "Analyse indisponible pour le moment, réessayez plus tard." };
+    const bodyText = await response.text().catch(() => "");
+    return {
+      ok: false,
+      error: `Analyse indisponible (Claude a répondu ${response.status} : ${bodyText.slice(0, 300)}).`,
+    };
   }
 
   const data: { content: TextBlock[]; usage?: { input_tokens?: number; output_tokens?: number } } =
