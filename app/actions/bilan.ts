@@ -243,23 +243,18 @@ export async function generateBilan(
       body: JSON.stringify({
         model: BILAN_MODEL,
         max_tokens: 700,
-        // Température à 0 : deux jeux de photos identiques ou très proches
-        // doivent produire des scores cohérents d'une génération à l'autre,
-        // pas un résultat qui dérive au hasard du sampling du modèle.
-        temperature: 0,
+        // `temperature` est refusé (400 invalid_request_error) par ce modèle
+        // depuis peu : la cohérence entre générations similaires repose donc
+        // uniquement sur les consignes d'impartialité du prompt ci-dessus.
         messages: [{ role: "user", content }],
       }),
     });
-  } catch (err) {
-    return { ok: false, error: `Analyse indisponible (réseau : ${String(err)}).` };
+  } catch {
+    return { ok: false, error: "Analyse indisponible, réessayez dans un instant." };
   }
 
   if (!response.ok) {
-    const bodyText = await response.text().catch(() => "");
-    return {
-      ok: false,
-      error: `Analyse indisponible (Claude a répondu ${response.status} : ${bodyText.slice(0, 300)}).`,
-    };
+    return { ok: false, error: "Analyse indisponible, réessayez dans un instant." };
   }
 
   const data: { content: TextBlock[]; usage?: { input_tokens?: number; output_tokens?: number } } =
