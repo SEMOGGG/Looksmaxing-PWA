@@ -21,6 +21,44 @@ function scoreDelta(current: number, previous: number | undefined) {
     : { label: `${diff}`, className: "text-danger" };
 }
 
+function PhotoTimeline({
+  title,
+  entries,
+  getUrl,
+}: {
+  title: string;
+  entries: StoredBilan[];
+  getUrl: (entry: StoredBilan) => string | null;
+}) {
+  const withPhoto = entries.filter((entry) => getUrl(entry));
+  if (withPhoto.length === 0) return null;
+
+  return (
+    <>
+      <h3 className="mt-5 text-sm font-semibold text-foreground">{title}</h3>
+      <div className="mt-2 flex gap-3 overflow-x-auto pb-2">
+        {withPhoto.map((entry) => (
+          <div
+            key={entry.createdAt}
+            className="w-28 shrink-0 rounded-2xl border border-border bg-surface p-2 text-center"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={getUrl(entry) ?? undefined}
+              alt={fullDate.format(new Date(entry.createdAt))}
+              className="aspect-square w-full rounded-xl object-cover"
+            />
+            <p className="mt-1.5 text-[11px] leading-tight text-muted">
+              {dayMonth.format(new Date(entry.createdAt))}
+            </p>
+            <p className="text-xs font-semibold text-accent-strong">{entry.overallScore}/100</p>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
 export default function SuiviPage() {
   const [plan, setPlan] = useState<Plan>("free");
   const [history, setHistory] = useState<StoredBilan[]>([]);
@@ -41,7 +79,9 @@ export default function SuiviPage() {
   const previous = history[1];
   const first = history[history.length - 1];
   const chronological = [...history].reverse();
-  const photosChronological = chronological.filter((entry) => entry.photoDataUrl);
+  const hasAnyPhoto = chronological.some(
+    (entry) => entry.photoDataUrl || entry.photoProfileDataUrl || entry.photoBodyDataUrl
+  );
 
   return (
     <>
@@ -94,28 +134,24 @@ export default function SuiviPage() {
               )}
             </div>
 
-            {photosChronological.length > 0 && (
+            {hasAnyPhoto && (
               <>
                 <h2 className="mt-8 text-base font-semibold text-foreground">Vos photos dans le temps</h2>
-                <div className="mt-3 flex gap-3 overflow-x-auto pb-2">
-                  {photosChronological.map((entry) => (
-                    <div
-                      key={entry.createdAt}
-                      className="w-28 shrink-0 rounded-2xl border border-border bg-surface p-2 text-center"
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={entry.photoDataUrl ?? undefined}
-                        alt={fullDate.format(new Date(entry.createdAt))}
-                        className="aspect-square w-full rounded-xl object-cover"
-                      />
-                      <p className="mt-1.5 text-[11px] leading-tight text-muted">
-                        {dayMonth.format(new Date(entry.createdAt))}
-                      </p>
-                      <p className="text-xs font-semibold text-accent-strong">{entry.overallScore}/100</p>
-                    </div>
-                  ))}
-                </div>
+                <PhotoTimeline
+                  title="Visage de face"
+                  entries={chronological}
+                  getUrl={(entry) => entry.photoDataUrl}
+                />
+                <PhotoTimeline
+                  title="Visage de profil"
+                  entries={chronological}
+                  getUrl={(entry) => entry.photoProfileDataUrl}
+                />
+                <PhotoTimeline
+                  title="Corps"
+                  entries={chronological}
+                  getUrl={(entry) => entry.photoBodyDataUrl}
+                />
               </>
             )}
 

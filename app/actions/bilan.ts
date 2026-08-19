@@ -21,7 +21,12 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 const CATEGORY_KEYS = Object.keys(CATEGORY_LABELS);
 
-export type StoredBilan = AnalysisResult & { createdAt: string; photoDataUrl: string | null };
+export type StoredBilan = AnalysisResult & {
+  createdAt: string;
+  photoDataUrl: string | null;
+  photoProfileDataUrl: string | null;
+  photoBodyDataUrl: string | null;
+};
 
 // Photos apportées pour ce bilan précis (ex. depuis /analyse pour un suivi
 // hebdomadaire), sans passer par l'onboarding. Un champ laissé vide retombe
@@ -37,6 +42,8 @@ type BilanRow = {
   categories: AnalysisCategory[];
   created_at: string;
   photo_data_url: string | null;
+  photo_profile_data_url: string | null;
+  photo_body_data_url: string | null;
 };
 
 function rowToStoredBilan(row: BilanRow): StoredBilan {
@@ -45,6 +52,8 @@ function rowToStoredBilan(row: BilanRow): StoredBilan {
     categories: row.categories,
     createdAt: row.created_at,
     photoDataUrl: row.photo_data_url,
+    photoProfileDataUrl: row.photo_profile_data_url,
+    photoBodyDataUrl: row.photo_body_data_url,
   };
 }
 
@@ -55,7 +64,7 @@ export async function getLatestBilan(): Promise<StoredBilan | null> {
   const supabase = getSupabaseServerClient();
   const { data } = await supabase
     .from("bilans")
-    .select("overall_score, categories, created_at, photo_data_url")
+    .select("overall_score, categories, created_at, photo_data_url, photo_profile_data_url, photo_body_data_url")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -74,7 +83,7 @@ export async function getBilanHistory(): Promise<StoredBilan[]> {
   const supabase = getSupabaseServerClient();
   const { data } = await supabase
     .from("bilans")
-    .select("overall_score, categories, created_at, photo_data_url")
+    .select("overall_score, categories, created_at, photo_data_url, photo_profile_data_url, photo_body_data_url")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(24)
@@ -286,6 +295,8 @@ export async function generateBilan(
     overall_score: overallScore,
     categories,
     photo_data_url: photoDataUrl,
+    photo_profile_data_url: photoProfileDataUrl,
+    photo_body_data_url: photoBodyDataUrl,
     input_tokens: data.usage?.input_tokens ?? 0,
     output_tokens: data.usage?.output_tokens ?? 0,
   });
@@ -307,6 +318,13 @@ export async function generateBilan(
 
   return {
     ok: true,
-    result: { overallScore, categories, createdAt: new Date().toISOString(), photoDataUrl },
+    result: {
+      overallScore,
+      categories,
+      createdAt: new Date().toISOString(),
+      photoDataUrl,
+      photoProfileDataUrl,
+      photoBodyDataUrl,
+    },
   };
 }
