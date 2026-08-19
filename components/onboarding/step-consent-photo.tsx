@@ -13,11 +13,38 @@ export function StepConsentPhoto({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Les photos prises directement depuis un téléphone dépassent souvent la
+  // limite de 6 Mo décodés (voir photoDataUrlSchema dans lib/validation.ts)
+  // et peuvent être dans un format non reconnu (HEIC...) — on les redimensionne
+  // et on les réencode systématiquement en JPEG avant de les stocker, pour ne
+  // jamais faire échouer silencieusement l'enregistrement du profil plus tard.
+  function resizeImage(dataUrl: string, maxDimension = 1280, quality = 0.82): Promise<string> {
+    return new Promise((resolve) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxDimension / Math.max(img.width, img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(dataUrl);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    });
+  }
+
   function handleFile(file: File | undefined) {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      if (typeof reader.result === "string") update({ photoDataUrl: reader.result });
+      if (typeof reader.result !== "string") return;
+      resizeImage(reader.result).then((resized) => update({ photoDataUrl: resized }));
     };
     reader.readAsDataURL(file);
   }

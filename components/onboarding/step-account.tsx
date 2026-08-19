@@ -10,7 +10,7 @@ export function StepAccount({
   onBack,
 }: {
   saving: boolean;
-  saveError?: boolean;
+  saveError?: string | null;
   onRetry?: () => void;
   onBack: () => void;
 }) {
@@ -19,19 +19,17 @@ export function StepAccount({
   return (
     <div>
       <h1 className="font-heading text-2xl font-semibold text-foreground">
-        Créez votre compte
+        {saveError ? "Votre profil n'a pas pu être enregistré" : "Créez votre compte"}
       </h1>
       <p className="mt-2 text-sm leading-relaxed text-muted">
-        Pour sauvegarder votre profil et débloquer la communauté, connectez-vous.
-        Votre bilan sera lié à ce compte, quel que soit l&rsquo;appareil utilisé.
+        {saveError
+          ? "Vous êtes bien connecté·e — c'est l'enregistrement de vos informations qui a échoué."
+          : "Pour sauvegarder votre profil et débloquer la communauté, connectez-vous. Votre bilan sera lié à ce compte, quel que soit l'appareil utilisé."}
       </p>
 
       {saveError ? (
         <div className="mt-10 flex flex-col items-center gap-3 py-10 text-center">
-          <p className="text-sm text-danger">
-            Une erreur est survenue lors de l&rsquo;enregistrement de votre profil.
-            Vérifiez votre connexion et réessayez.
-          </p>
+          <p className="text-sm text-danger">{saveError}</p>
           <button
             type="button"
             onClick={onRetry}

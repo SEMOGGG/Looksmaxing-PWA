@@ -66,13 +66,17 @@ export async function getUserData(): Promise<UserData> {
   };
 }
 
-export async function saveUserProfile(profile: OnboardingData): Promise<{ ok: boolean }> {
+export async function saveUserProfile(
+  profile: OnboardingData
+): Promise<{ ok: true } | { ok: false; reason: "auth" | "rate-limit" | "validation" | "db"; detail?: string }> {
   const { userId } = await auth();
-  if (!userId) return { ok: false };
-  if (!(await checkRateLimit("profileWrite", userId))) return { ok: false };
+  if (!userId) return { ok: false, reason: "auth" };
+  if (!(await checkRateLimit("profileWrite", userId))) return { ok: false, reason: "rate-limit" };
 
   const parsed = onboardingProfileSchema.safeParse(profile);
-  if (!parsed.success) return { ok: false };
+  if (!parsed.success) {
+    return { ok: false, reason: "validation", detail: parsed.error.issues[0]?.message };
+  }
 
   const supabase = getSupabaseServerClient();
   const { error } = await supabase.from("user_profiles").upsert({
@@ -89,7 +93,7 @@ export async function saveUserProfile(profile: OnboardingData): Promise<{ ok: bo
     updated_at: new Date().toISOString(),
   });
 
-  return { ok: !error };
+  return error ? { ok: false, reason: "db", detail: error.message } : { ok: true };
 }
 
 export async function saveUserPlan(plan: Plan): Promise<{ ok: boolean }> {

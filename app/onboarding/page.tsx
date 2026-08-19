@@ -17,13 +17,22 @@ import { loadDraft, saveDraft, clearDraft } from "@/lib/onboarding-draft";
 
 const TOTAL_STEPS = 6;
 
+const SAVE_ERROR_MESSAGES: Record<string, string> = {
+  "rate-limit": "Trop de tentatives en peu de temps, patientez une minute puis réessayez.",
+  validation:
+    "Certaines informations semblent invalides (photo trop volumineuse ou format non reconnu). Retournez à l'étape photo et réessayez avec une autre image.",
+  db: "Le serveur n'a pas pu enregistrer votre profil. Réessayez dans un instant.",
+  auth: "Votre session a expiré, reconnectez-vous.",
+  network: "Impossible de contacter le serveur. Vérifiez votre connexion et réessayez.",
+};
+
 export default function OnboardingPage() {
   const router = useRouter();
   const { isSignedIn, isLoaded } = useUser();
   const [step, setStep] = useState(1);
   const [data, setData] = useState<OnboardingData>(initialOnboardingData);
   const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
   // L'étape de création de compte peut déclencher un rechargement de page
@@ -57,18 +66,22 @@ export default function OnboardingPage() {
   // indéfiniment : la personne voit une erreur avec un bouton pour réessayer.
   async function persistAndContinue() {
     setSaving(true);
-    setSaveError(false);
+    setSaveError(null);
     try {
       const { profile } = await getUserData();
       if (!profile) {
         const result = await saveUserProfile(data);
-        if (!result.ok) throw new Error("save-failed");
+        if (!result.ok) {
+          setSaving(false);
+          setSaveError(SAVE_ERROR_MESSAGES[result.reason] ?? SAVE_ERROR_MESSAGES.db);
+          return;
+        }
       }
       clearDraft();
       router.push("/analyse");
     } catch {
       setSaving(false);
-      setSaveError(true);
+      setSaveError(SAVE_ERROR_MESSAGES.network);
     }
   }
 
