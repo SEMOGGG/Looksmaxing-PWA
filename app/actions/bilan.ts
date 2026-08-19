@@ -95,7 +95,7 @@ export async function getBilanHistory(): Promise<StoredBilan[]> {
 type TextBlock = { type: "text"; text: string };
 type ImageBlock = { type: "image"; source: { type: "base64"; media_type: string; data: string } };
 
-function buildBilanPrompt(hasBodyPhoto: boolean, previousCategories?: AnalysisCategory[] | null): string {
+function buildBilanPrompt(hasBodyPhoto: boolean): string {
   const photoList = hasBodyPhoto
     ? `Tu reçois 3 photos, dans cet ordre : (1) visage de face, (2) visage de profil, (3) corps.`
     : `Tu reçois 2 photos, dans cet ordre : (1) visage de face, (2) visage de profil. Aucune photo de corps n'a été fournie.`;
@@ -104,17 +104,13 @@ function buildBilanPrompt(hasBodyPhoto: boolean, previousCategories?: AnalysisCa
     ? `La photo 3 (corps) te permet d'évaluer "posture", "tonus" et "composition" à partir de ce qui y est réellement visible — reste prudent, une estimation visuelle large plutôt qu'un chiffre trop précis.`
     : `Aucune photo de corps n'a été fournie : pour "posture", "tonus" et "composition", tu DOIS mettre un score neutre de 70, "isFocus": false, et une phrase du type "Pas assez visible sur les photos fournies pour évaluer ce point — ajoutez une photo de corps pour une estimation plus précise." N'invente JAMAIS d'observation sur la silhouette, la graisse corporelle ou la masse musculaire à partir des seules photos de visage : c'est trompeur et potentiellement décourageant à tort pour la personne.`;
 
-  const trendContext = previousCategories?.length
-    ? `\nPour information, voici les scores de la précédente analyse de cette même personne (issus de photos différentes, prises à un autre moment) : ${previousCategories
-        .map((c) => `${c.key}: ${c.score}/100`)
-        .join(", ")}. Si tu observes un changement réel et notable par rapport à ces photos précédentes, tu peux le mentionner brièvement et avec bienveillance dans la phrase de synthèse correspondante (ex. "en progression depuis votre dernière analyse"). Si tu ne peux pas juger avec confiance d'un changement réel (angle, lumière ou cadrage différents), ne prétends rien sur une évolution et décris simplement l'état actuel.\n`
-    : "";
-
-  return `Analyse ces photos dans le cadre d'une application de coaching bien-être et apparence, de façon bienveillante et constructive — jamais critique ni dévalorisante.
+  return `Analyse ces photos dans le cadre d'une application de coaching bien-être et apparence, de façon bienveillante dans la formulation mais strictement impartiale et cohérente dans l'évaluation elle-même — jamais complaisante.
 
 ${photoList}
-${trendContext}
-Pour chacune de ces 5 catégories, donne un score de 0 à 100 (jamais en dessous de 40, l'évaluation doit rester encourageante) et une phrase de synthèse bienveillante en français :
+
+Règle d'impartialité stricte : évalue uniquement ce que montrent CES photos précises, sans aucune autre information de contexte. Tu ne sais rien et tu ne dois rien supposer sur d'éventuelles analyses passées de cette personne. Deux jeux de photos identiques ou très similaires doivent produire des scores quasiment identiques — ne fais jamais varier un score pour "faire plaisir", encourager une progression supposée, ou parce que la personne revient faire une nouvelle analyse. Un score ne doit changer que si ce qui est visible sur la photo a réellement changé.
+
+Pour chacune de ces 5 catégories, donne un score de 0 à 100 (jamais en dessous de 40, la formulation doit rester encourageante mais le chiffre lui-même doit rester honnête) et une phrase de synthèse bienveillante en français, centrée uniquement sur ce qui est visible sur ces photos :
 - "visage" (visage & symétrie, à partir des photos de face et de profil)
 - "peau" (grain, teint, texture visibles sur le visage)
 - "posture"
@@ -213,17 +209,6 @@ export async function generateBilan(
     return { ok: false, error: "Un bilan est déjà en cours de génération, patientez quelques secondes." };
   }
 
-  // Bilan précédent (avant l'insertion du nouveau) : sert de contexte au
-  // prompt pour que les phrases de synthèse puissent noter une évolution
-  // réelle plutôt que de toujours décrire un instantané isolé.
-  const { data: previousRow } = await supabase
-    .from("bilans")
-    .select("categories")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle<{ categories: AnalysisCategory[] }>();
-
   const face = parsePhotoDataUrl(photoDataUrl);
   const sideProfile = parsePhotoDataUrl(photoProfileDataUrl);
   if (!face || !sideProfile) return { ok: false, error: "Photo de face ou de profil invalide." };
@@ -242,7 +227,7 @@ export async function generateBilan(
     content.push({ type: "text", text: "Photo 3 — corps :" });
     content.push({ type: "image", source: { type: "base64", media_type: body.mediaType, data: body.base64Data } });
   }
-  content.push({ type: "text", text: buildBilanPrompt(Boolean(body), previousRow?.categories) });
+  content.push({ type: "text", text: buildBilanPrompt(Boolean(body)) });
 
   let response: Response;
   try {
@@ -256,6 +241,10 @@ export async function generateBilan(
       body: JSON.stringify({
         model: BILAN_MODEL,
         max_tokens: 700,
+        // Température à 0 : deux jeux de photos identiques ou très proches
+        // doivent produire des scores cohérents d'une génération à l'autre,
+        // pas un résultat qui dérive au hasard du sampling du modèle.
+        temperature: 0,
         messages: [{ role: "user", content }],
       }),
     });
