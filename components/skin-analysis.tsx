@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { CameraIcon, InfoIcon, LockIcon } from "@/components/icons";
+import { resizeImage } from "@/components/photo-slot";
 import { analyzeSkin, getLatestSkinAnalysis, type SkinAnalysisResult } from "@/app/actions/skin-analysis";
 import { skincareIngredients } from "@/lib/skincare";
 
@@ -32,13 +33,19 @@ export function SkinAnalysis({ isPremium }: { isPremium: boolean }) {
     reader.onload = async () => {
       if (typeof reader.result !== "string") return;
       setAnalyzing(true);
-      const response = await analyzeSkin(reader.result);
-      setAnalyzing(false);
-      if (!response.ok) {
-        setError(response.error);
-        return;
+      try {
+        const resized = await resizeImage(reader.result);
+        const response = await analyzeSkin(resized);
+        if (!response.ok) {
+          setError(response.error);
+          return;
+        }
+        setResult(response.result);
+      } catch {
+        setError("Analyse indisponible, réessayez dans un instant.");
+      } finally {
+        setAnalyzing(false);
       }
-      setResult(response.result);
     };
     reader.readAsDataURL(file);
   }

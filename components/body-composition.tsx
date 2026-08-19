@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { CameraIcon, InfoIcon, LockIcon } from "@/components/icons";
+import { resizeImage } from "@/components/photo-slot";
 import {
   analyzeBodyComposition,
   getLatestBodyAnalysis,
@@ -35,13 +36,23 @@ export function BodyComposition({ isPremium }: { isPremium: boolean }) {
     reader.onload = async () => {
       if (typeof reader.result !== "string") return;
       setAnalyzing(true);
-      const response = await analyzeBodyComposition(reader.result);
-      setAnalyzing(false);
-      if (!response.ok) {
-        setError(response.error);
-        return;
+      try {
+        // Une photo brute de téléphone peut dépasser la limite acceptée par
+        // le serveur et rester bloquée sur "Analyse en cours…" sans jamais
+        // aboutir : on la redimensionne d'abord, comme pour les autres
+        // photos de l'app.
+        const resized = await resizeImage(reader.result);
+        const response = await analyzeBodyComposition(resized);
+        if (!response.ok) {
+          setError(response.error);
+          return;
+        }
+        setResult(response.result);
+      } catch {
+        setError("Analyse indisponible, réessayez dans un instant.");
+      } finally {
+        setAnalyzing(false);
       }
-      setResult(response.result);
     };
     reader.readAsDataURL(file);
   }
