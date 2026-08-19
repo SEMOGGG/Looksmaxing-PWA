@@ -129,6 +129,28 @@ Réponds uniquement avec un objet JSON strict, sans texte autour ni balises mark
 {"categories": [{"key": "visage", "score": <0-100>, "isFocus": <bool>, "summary": "<phrase>"}, {"key": "peau", "score": <0-100>, "isFocus": <bool>, "summary": "<phrase>"}, {"key": "posture", "score": <0-100>, "isFocus": <bool>, "summary": "<phrase>"}, {"key": "tonus", "score": <0-100>, "isFocus": <bool>, "summary": "<phrase>"}, {"key": "composition", "score": <0-100>, "isFocus": <bool>, "summary": "<phrase>"}]}`;
 }
 
+// Filet de sécurité déterministe : malgré la consigne explicite du prompt,
+// Claude réintroduit parfois une formulation de comparaison temporelle
+// (ex. "en progression depuis votre dernière analyse") dans un summary,
+// ce qui est trompeur puisqu'aucune photo précédente ne lui est fournie.
+// On la retire ici plutôt que de compter uniquement sur l'obéissance du
+// modèle au prompt.
+const TEMPORAL_COMPARISON_PATTERNS: RegExp[] = [
+  /,?\s*(?:et\s+)?(?:en\s+)?(?:nette\s+)?(?:progression|amélioration|net progrès)\s+(?:depuis|par rapport (?:à|au))\s+[^,.]+/gi,
+  /,?\s*depuis\s+(?:votre|la)\s+derni[eè]re\s+(?:analyse|fois|visite)[^,.]*/gi,
+  /,?\s*continuez\s+(?:comme\s+ça|ainsi)[^,.]*/gi,
+  /,?\s*toujours\s+aussi\b/gi,
+  /,?\s*comme\s+pr[ée]c[ée]demment\b/gi,
+];
+
+function stripTemporalComparisons(summary: string): string {
+  let result = summary;
+  for (const pattern of TEMPORAL_COMPARISON_PATTERNS) {
+    result = result.replace(pattern, "");
+  }
+  return result.replace(/\s{2,}/g, " ").replace(/\s+([.,])/g, "$1").trim();
+}
+
 function parsePhotoDataUrl(dataUrl: string): { mediaType: string; base64Data: string } | null {
   const match = dataUrl.match(/^data:(image\/[a-zA-Z]+);base64,(.+)$/);
   if (!match) return null;
@@ -275,7 +297,9 @@ export async function generateBilan(
       label: CATEGORY_LABELS[key],
       score: typeof found?.score === "number" ? Math.max(0, Math.min(100, Math.round(found.score))) : 70,
       isFocus: found?.isFocus ?? false,
-      summary: found?.summary ?? "Analyse indisponible pour cette catégorie.",
+      summary: found?.summary
+        ? stripTemporalComparisons(found.summary)
+        : "Analyse indisponible pour cette catégorie.",
     };
   });
   const overallScore = Math.round(categories.reduce((sum, c) => sum + c.score, 0) / categories.length);
