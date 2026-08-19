@@ -7,6 +7,7 @@ import { skincareIngredients } from "@/lib/skincare";
 import { photoDataUrlSchema } from "@/lib/validation";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getMonthlyAiCostUsd, MONTHLY_AI_BUDGET_USD } from "@/lib/ai-usage";
+import { extractJsonObject } from "@/lib/claude-json";
 
 // Même logique que l'estimation de composition corporelle : modèle plus
 // capable (usage ponctuel), coût réel encadré par le budget mensuel
@@ -151,7 +152,7 @@ export async function analyzeSkin(
 
   let parsed: { points: string[]; recommendedIngredients: string[]; notes: string };
   try {
-    parsed = JSON.parse(text.trim());
+    parsed = JSON.parse(extractJsonObject(text));
   } catch {
     return { ok: false, error: "Réponse inattendue de l'analyse, réessayez." };
   }

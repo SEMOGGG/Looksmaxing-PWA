@@ -5,6 +5,7 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { getUserData } from "@/app/actions/user-data";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getMonthlyAiCostUsd, MONTHLY_AI_BUDGET_USD } from "@/lib/ai-usage";
+import { extractJsonObject } from "@/lib/claude-json";
 import type { AnalysisCategory, AnalysisResult } from "@/lib/analysis";
 
 const BILAN_MODEL = "claude-sonnet-5";
@@ -210,7 +211,7 @@ export async function generateBilan(): Promise<{ ok: true; result: StoredBilan }
 
   let parsed: { categories: { key: string; score: number; isFocus: boolean; summary: string }[] };
   try {
-    parsed = JSON.parse(text.trim());
+    parsed = JSON.parse(extractJsonObject(text));
   } catch {
     return { ok: false, error: "Réponse inattendue de l'analyse, réessayez." };
   }

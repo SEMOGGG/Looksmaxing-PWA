@@ -6,6 +6,7 @@ import { getUserData } from "@/app/actions/user-data";
 import { photoDataUrlSchema } from "@/lib/validation";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getMonthlyAiCostUsd, MONTHLY_AI_BUDGET_USD } from "@/lib/ai-usage";
+import { extractJsonObject } from "@/lib/claude-json";
 
 // Modèle plus capable que le Coach IA (Sonnet plutôt que Haiku) pour une
 // meilleure qualité de lecture d'image. Le coût réel est encadré par le
@@ -141,7 +142,7 @@ export async function analyzeBodyComposition(
 
   let parsed: { rangeLow: number | null; rangeHigh: number | null; notes: string };
   try {
-    parsed = JSON.parse(text.trim());
+    parsed = JSON.parse(extractJsonObject(text));
   } catch {
     return { ok: false, error: "Réponse inattendue de l'analyse, réessayez." };
   }
