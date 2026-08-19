@@ -1,21 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useUser, UserButton } from "@clerk/nextjs";
 import { AppTopBar } from "@/components/app-top-bar";
 import { DemoProfileBanner } from "@/components/demo-profile-banner";
 import { ProgressChart } from "@/components/progress-chart";
 import { CheckIcon, LockIcon } from "@/components/icons";
 import { DeleteAccountSection } from "@/components/delete-account-section";
-import { demoProfile, type Goal } from "@/lib/onboarding";
 import { getUserData, saveUserPlan } from "@/app/actions/user-data";
-import { generateAnalysis } from "@/lib/analysis";
+import { getBilanHistory, type StoredBilan } from "@/app/actions/bilan";
 import type { Plan } from "@/lib/user-data";
 
-const pastEntries = [
-  { label: "15 mai", date: "15 mai 2026", score: 64 },
-  { label: "20 juin", date: "20 juin 2026", score: 71 },
-];
+const historyDayMonth = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short" });
+const historyFullDate = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 
 const freeFeatures = [
   "1 bilan d'analyse par mois",
@@ -38,22 +36,22 @@ const premiumFeatures = [
 
 export default function ComptePage() {
   const { user } = useUser();
-  const [goals, setGoals] = useState<Goal[]>(demoProfile.goals);
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
   const [isDemo, setIsDemo] = useState(false);
   const [plan, setPlan] = useState<Plan>("free");
+  const [history, setHistory] = useState<StoredBilan[]>([]);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    getUserData().then(({ profile: saved, plan: userPlan }) => {
+    Promise.all([getUserData(), getBilanHistory()]).then(([{ profile: saved, plan: userPlan }, bilans]) => {
       if (saved) {
-        setGoals(saved.goals);
         setPhotoDataUrl(saved.photoDataUrl);
         setIsDemo(false);
       } else {
         setIsDemo(true);
       }
       setPlan(userPlan);
+      setHistory(bilans);
       setReady(true);
     });
   }, []);
@@ -65,12 +63,8 @@ export default function ComptePage() {
 
   if (!ready) return null;
 
-  const { overallScore } = generateAnalysis(goals);
-  const history = [
-    ...pastEntries,
-    { label: "29 juil.", date: "29 juillet 2026", score: overallScore },
-  ];
   const isPremium = plan === "premium";
+  const visibleHistory = history.slice(0, isPremium ? undefined : 1);
 
   return (
     <>
@@ -101,13 +95,7 @@ export default function ComptePage() {
         <h2 className="mt-6 text-base font-semibold text-foreground">
           Votre progression
         </h2>
-        {isPremium ? (
-          <div className="mt-3 rounded-2xl border border-border bg-surface p-5">
-            <ProgressChart
-              points={history.map((entry) => ({ label: entry.label, value: entry.score }))}
-            />
-          </div>
-        ) : (
+        {!isPremium ? (
           <div className="mt-3 flex items-center gap-3 rounded-2xl border border-dashed border-border bg-surface p-5">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-muted text-muted">
               <LockIcon className="h-5 w-5" />
@@ -117,28 +105,56 @@ export default function ComptePage() {
               plan <span className="font-medium text-foreground">Premium</span>.
             </p>
           </div>
+        ) : history.length > 0 ? (
+          <div className="mt-3 rounded-2xl border border-border bg-surface p-5">
+            <ProgressChart
+              points={[...history]
+                .reverse()
+                .map((entry) => ({
+                  label: historyDayMonth.format(new Date(entry.createdAt)),
+                  value: entry.overallScore,
+                }))}
+            />
+          </div>
+        ) : (
+          <div className="mt-3 rounded-2xl border border-dashed border-border bg-surface p-5">
+            <p className="text-sm text-muted">
+              Pas encore de bilan enregistré. Générez votre premier bilan Analyse
+              pour commencer le suivi de votre progression.
+            </p>
+          </div>
         )}
 
         <h2 className="mt-8 text-base font-semibold text-foreground">
           Historique des analyses
         </h2>
         <div className="mt-3 flex flex-col gap-2.5">
-          {[...history]
-            .reverse()
-            .slice(0, isPremium ? undefined : 1)
-            .map((entry) => (
-              <div
-                key={entry.date}
-                className="flex items-center justify-between rounded-2xl border border-border bg-surface p-4"
-              >
-                <span className="text-sm text-foreground">{entry.date}</span>
-                <span className="font-heading text-lg font-semibold text-accent-strong">
-                  {entry.score}
-                  <span className="text-xs font-normal text-muted"> /100</span>
-                </span>
-              </div>
-            ))}
-          {!isPremium && (
+          {visibleHistory.length === 0 && (
+            <div className="rounded-2xl border border-dashed border-border bg-surface p-4">
+              <p className="text-sm text-muted">
+                Aucun bilan pour l&rsquo;instant. Rendez-vous sur{" "}
+                <Link href="/analyse" className="font-medium text-accent-strong underline underline-offset-2">
+                  Analyse
+                </Link>{" "}
+                pour générer le premier.
+              </p>
+            </div>
+          )}
+          {visibleHistory.map((entry) => (
+            <div
+              key={entry.createdAt}
+              className="flex items-center justify-between rounded-2xl border border-border bg-surface p-4"
+            >
+              <span className="text-sm text-foreground">
+                {historyFullDate.format(new Date(entry.createdAt))}
+              </span>
+              <span className="font-heading text-lg font-semibold text-accent-strong">
+                {entry.overallScore}
+                <span className="text-xs font-normal text-muted"> /100</span>
+              </span>
+            </div>
+          ))}
+          {!isPremium && history.length > 1 && (
             <div className="flex items-center gap-3 rounded-2xl border border-dashed border-border bg-surface p-4">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-muted text-muted">
                 <LockIcon className="h-4 w-4" />

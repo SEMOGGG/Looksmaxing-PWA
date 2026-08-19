@@ -44,6 +44,28 @@ export async function getLatestBilan(): Promise<StoredBilan | null> {
   return { overallScore: data.overall_score, categories: data.categories, createdAt: data.created_at };
 }
 
+// Historique complet (le plus récent en premier), pour le graphique de
+// progression et la liste sur la page Compte — jamais de données fictives.
+export async function getBilanHistory(): Promise<StoredBilan[]> {
+  const { userId } = await auth();
+  if (!userId) return [];
+
+  const supabase = getSupabaseServerClient();
+  const { data } = await supabase
+    .from("bilans")
+    .select("overall_score, categories, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(24)
+    .returns<BilanRow[]>();
+
+  return (data ?? []).map((row) => ({
+    overallScore: row.overall_score,
+    categories: row.categories,
+    createdAt: row.created_at,
+  }));
+}
+
 type TextBlock = { type: "text"; text: string };
 
 const BILAN_PROMPT = `Analyse cette photo de profil dans le cadre d'une application de coaching bien-être et apparence, de façon bienveillante et constructive — jamais critique ni dévalorisante.
