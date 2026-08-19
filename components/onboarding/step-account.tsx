@@ -3,7 +3,17 @@
 import { useState } from "react";
 import { SignIn, SignUp } from "@clerk/nextjs";
 
-export function StepAccount({ saving, onBack }: { saving: boolean; onBack: () => void }) {
+export function StepAccount({
+  saving,
+  saveError,
+  onRetry,
+  onBack,
+}: {
+  saving: boolean;
+  saveError?: boolean;
+  onRetry?: () => void;
+  onBack: () => void;
+}) {
   const [mode, setMode] = useState<"sign-up" | "sign-in">("sign-up");
 
   return (
@@ -16,7 +26,21 @@ export function StepAccount({ saving, onBack }: { saving: boolean; onBack: () =>
         Votre bilan sera lié à ce compte, quel que soit l&rsquo;appareil utilisé.
       </p>
 
-      {saving ? (
+      {saveError ? (
+        <div className="mt-10 flex flex-col items-center gap-3 py-10 text-center">
+          <p className="text-sm text-danger">
+            Une erreur est survenue lors de l&rsquo;enregistrement de votre profil.
+            Vérifiez votre connexion et réessayez.
+          </p>
+          <button
+            type="button"
+            onClick={onRetry}
+            className="bg-gradient-accent mt-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white"
+          >
+            Réessayer
+          </button>
+        </div>
+      ) : saving ? (
         <div className="mt-10 flex flex-col items-center gap-3 py-10 text-center">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent border-t-transparent" />
           <p className="text-sm text-muted">Enregistrement de votre profil…</p>

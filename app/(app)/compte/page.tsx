@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useUser, UserButton } from "@clerk/nextjs";
 import { AppTopBar } from "@/components/app-top-bar";
 import { DemoProfileBanner } from "@/components/demo-profile-banner";
 import { ProgressChart } from "@/components/progress-chart";
@@ -36,6 +37,7 @@ const premiumFeatures = [
 ];
 
 export default function ComptePage() {
+  const { user } = useUser();
   const [goals, setGoals] = useState<Goal[]>(demoProfile.goals);
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
   const [isDemo, setIsDemo] = useState(false);
@@ -74,6 +76,26 @@ export default function ComptePage() {
     <>
       <AppTopBar title="Mon compte" idPrefix="compte-logo" />
       <main className="mx-auto w-full max-w-5xl flex-1 px-5 py-6">
+        {user && (
+          <div className="flex items-center gap-4 rounded-2xl border border-border bg-surface p-4">
+            <UserButton
+              appearance={{ elements: { userButtonAvatarBox: "h-14 w-14" } }}
+            />
+            <div className="min-w-0">
+              <p className="truncate text-base font-semibold text-foreground">
+                {user.fullName || user.username || "Votre profil"}
+              </p>
+              <p className="truncate text-sm text-muted">
+                {user.primaryEmailAddress?.emailAddress}
+              </p>
+              <p className="mt-1 text-xs text-muted">
+                Cliquez sur votre photo pour modifier votre nom, votre e-mail, votre
+                mot de passe ou votre photo de profil.
+              </p>
+            </div>
+          </div>
+        )}
+
         {isDemo && <DemoProfileBanner />}
 
         <h2 className="mt-6 text-base font-semibold text-foreground">

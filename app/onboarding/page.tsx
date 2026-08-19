@@ -23,6 +23,7 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(1);
   const [data, setData] = useState<OnboardingData>(initialOnboardingData);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
   // L'étape de création de compte peut déclencher un rechargement de page
@@ -51,21 +52,29 @@ export default function OnboardingPage() {
   // connexion, pas d'en dépendre. Si la personne avait déjà un compte (elle
   // s'est connectée ici plutôt que de recréer un compte), on ne réécrit
   // jamais son profil existant avec les données de ce brouillon : on la
-  // renvoie directement vers son bilan.
-  useEffect(() => {
-    if (step !== TOTAL_STEPS || !isLoaded || !isSignedIn || saving) return;
+  // renvoie directement vers son bilan. En cas d'échec (Supabase
+  // indisponible, etc.), on ne laisse jamais le spinner tourner
+  // indéfiniment : la personne voit une erreur avec un bouton pour réessayer.
+  async function persistAndContinue() {
     setSaving(true);
-    getUserData().then(({ profile }) => {
-      if (profile) {
-        clearDraft();
-        router.push("/analyse");
-        return;
+    setSaveError(false);
+    try {
+      const { profile } = await getUserData();
+      if (!profile) {
+        const result = await saveUserProfile(data);
+        if (!result.ok) throw new Error("save-failed");
       }
-      saveUserProfile(data).then(() => {
-        clearDraft();
-        router.push("/analyse");
-      });
-    });
+      clearDraft();
+      router.push("/analyse");
+    } catch {
+      setSaving(false);
+      setSaveError(true);
+    }
+  }
+
+  useEffect(() => {
+    if (step !== TOTAL_STEPS || !isLoaded || !isSignedIn || saving || saveError) return;
+    persistAndContinue();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, isLoaded, isSignedIn]);
 
@@ -102,7 +111,14 @@ export default function OnboardingPage() {
         {step === 3 && <StepActivity data={data} update={update} />}
         {step === 4 && <StepGoals data={data} update={update} />}
         {step === 5 && <StepSummary data={data} />}
-        {step === 6 && <StepAccount saving={saving} onBack={goBack} />}
+        {step === 6 && (
+          <StepAccount
+            saving={saving}
+            saveError={saveError}
+            onRetry={persistAndContinue}
+            onBack={goBack}
+          />
+        )}
       </main>
 
       {step < TOTAL_STEPS && (
