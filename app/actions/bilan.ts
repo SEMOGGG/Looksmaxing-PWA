@@ -8,11 +8,6 @@ import { getMonthlyAiCostUsd, MONTHLY_AI_BUDGET_USD } from "@/lib/ai-usage";
 import { extractJsonObject } from "@/lib/claude-json";
 import type { AnalysisCategory, AnalysisResult } from "@/lib/analysis";
 
-// Analyser 2 ou 3 photos dépasse régulièrement la limite par défaut de 10s
-// des fonctions serverless Vercel (plan Hobby), qui coupait l'appel à Claude
-// en plein milieu (503) sans jamais atteindre le code d'erreur applicatif.
-export const maxDuration = 60;
-
 const BILAN_MODEL = "claude-sonnet-5";
 const RESUBMIT_COOLDOWN_SECONDS = 30;
 
