@@ -13,6 +13,7 @@
   --accent-2: #ff5da2;
   --gradient-accent: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
   --danger: #ff6b6b;
+  --success: #4ade80;
 }
 
 @theme inline {
@@ -27,6 +28,7 @@
   --color-accent-soft: var(--accent-soft);
   --color-accent-2: var(--accent-2);
   --color-danger: var(--danger);
+  --color-success: var(--success);
   --font-sans: var(--font-sans);
   --font-heading: var(--font-heading);
 }

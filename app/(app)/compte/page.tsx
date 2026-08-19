@@ -65,6 +65,7 @@ export default function ComptePage() {
 
   const isPremium = plan === "premium";
   const visibleHistory = history.slice(0, isPremium ? undefined : 1);
+  const bilansWithPhotos = history.filter((entry) => entry.photoDataUrl);
 
   return (
     <>
@@ -125,6 +126,32 @@ export default function ComptePage() {
           </div>
         )}
 
+        {isPremium && history.length > 1 && (
+          <>
+            <h2 className="mt-8 text-base font-semibold text-foreground">
+              Évolution depuis votre dernier bilan
+            </h2>
+            <div className="mt-3 flex flex-col gap-2.5">
+              {history[0].categories.map((category) => {
+                const previousScore = history[1].categories.find((c) => c.key === category.key)?.score;
+                if (previousScore === undefined) return null;
+                const diff = category.score - previousScore;
+                const diffLabel = diff > 0 ? `+${diff}` : diff === 0 ? "Stable" : `${diff}`;
+                const diffClass = diff > 0 ? "text-success" : diff < 0 ? "text-danger" : "text-muted";
+                return (
+                  <div
+                    key={category.key}
+                    className="flex items-center justify-between rounded-2xl border border-border bg-surface p-4"
+                  >
+                    <span className="text-sm text-foreground">{category.label}</span>
+                    <span className={`text-sm font-semibold ${diffClass}`}>{diffLabel}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+
         <h2 className="mt-8 text-base font-semibold text-foreground">
           Historique des analyses
         </h2>
@@ -172,15 +199,24 @@ export default function ComptePage() {
         </h2>
         {isPremium ? (
           <div className="mt-3 grid grid-cols-2 gap-3">
-            {["Photo initiale", "Aujourd'hui"].map((label) => (
+            {[
+              {
+                label: bilansWithPhotos.length > 0 ? historyFullDate.format(new Date(bilansWithPhotos[bilansWithPhotos.length - 1].createdAt)) : "Photo initiale",
+                url: bilansWithPhotos.length > 0 ? bilansWithPhotos[bilansWithPhotos.length - 1].photoDataUrl : photoDataUrl,
+              },
+              {
+                label: bilansWithPhotos.length > 0 ? historyFullDate.format(new Date(bilansWithPhotos[0].createdAt)) : "Aujourd'hui",
+                url: bilansWithPhotos.length > 0 ? bilansWithPhotos[0].photoDataUrl : photoDataUrl,
+              },
+            ].map(({ label, url }) => (
               <div
                 key={label}
                 className="rounded-2xl border border-border bg-surface p-3 text-center"
               >
-                {photoDataUrl ? (
+                {url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={photoDataUrl}
+                    src={url}
                     alt={label}
                     className="aspect-square w-full rounded-xl object-cover"
                   />

@@ -241,6 +241,11 @@ create table if not exists bilans (
   created_at timestamptz not null default now()
 );
 
+-- Photo de face utilisée pour ce bilan précis, conservée pour permettre un
+-- vrai suivi photo dans le temps (page Compte) plutôt que de toujours
+-- montrer la photo actuelle du profil des deux côtés.
+alter table bilans add column if not exists photo_data_url text;
+
 create index if not exists bilans_user_idx on bilans (user_id, created_at desc);
 
 alter table bilans enable row level security;
