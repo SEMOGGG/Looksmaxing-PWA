@@ -65,8 +65,16 @@ export default function OnboardingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded, isSignedIn]);
 
+  // Ne jamais persister un brouillon tant que rien de réel n'a été saisi :
+  // sinon, arriver sur l'étape 1 écrit aussitôt un brouillon vide qui, à la
+  // prochaine visite dans le même onglet, prendrait le pas pour toujours sur
+  // le profil déjà enregistré côté serveur (voir l'effet de préremplissage
+  // ci-dessus) — même après avoir corrigé une photo ou une info ailleurs.
   useEffect(() => {
-    if (hydrated) saveDraft(step, data);
+    if (!hydrated) return;
+    const isPristine = step === 1 && JSON.stringify(data) === JSON.stringify(initialOnboardingData);
+    if (isPristine) return;
+    saveDraft(step, data);
   }, [step, data, hydrated]);
 
   function update(patch: Partial<OnboardingData>) {
