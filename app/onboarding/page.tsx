@@ -12,7 +12,7 @@ import { StepGoals } from "@/components/onboarding/step-goals";
 import { StepSummary } from "@/components/onboarding/step-summary";
 import { StepAccount } from "@/components/onboarding/step-account";
 import { initialOnboardingData, type OnboardingData } from "@/lib/onboarding";
-import { saveUserProfile } from "@/app/actions/user-data";
+import { getUserData, saveUserProfile } from "@/app/actions/user-data";
 import { loadDraft, saveDraft, clearDraft } from "@/lib/onboarding-draft";
 
 const TOTAL_STEPS = 6;
@@ -37,15 +37,33 @@ export default function OnboardingPage() {
 
   // L'étape de création de compte peut déclencher un rechargement de page
   // (synchronisation de session Clerk) : on restaure la progression déjà
-  // saisie si elle a été interrompue par ce rechargement.
+  // saisie si elle a été interrompue par ce rechargement. Si aucun brouillon
+  // n'est en cours et que la personne a déjà un profil enregistré (elle
+  // revient ici pour modifier une photo ou une info), on préremplit le
+  // formulaire avec son profil existant plutôt que de repartir de zéro —
+  // sinon il faudrait tout ressaisir juste pour changer une seule photo.
   useEffect(() => {
+    if (!isLoaded) return;
+
     const draft = loadDraft();
     if (draft) {
       setStep(draft.step);
       setData(draft.data);
+      setHydrated(true);
+      return;
     }
-    setHydrated(true);
-  }, []);
+
+    if (!isSignedIn) {
+      setHydrated(true);
+      return;
+    }
+
+    getUserData().then(({ profile }) => {
+      if (profile) setData(profile);
+      setHydrated(true);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, isSignedIn]);
 
   useEffect(() => {
     if (hydrated) saveDraft(step, data);
