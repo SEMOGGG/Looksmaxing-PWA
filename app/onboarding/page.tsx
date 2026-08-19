@@ -34,6 +34,7 @@ export default function OnboardingPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
+  const [debug, setDebug] = useState("no debug yet");
 
   // L'étape de création de compte peut déclencher un rechargement de page
   // (synchronisation de session Clerk) : on restaure la progression déjà
@@ -49,16 +50,23 @@ export default function OnboardingPage() {
   useEffect(() => {
     const draft = loadDraft();
     if (draft) {
+      setDebug("used draft");
       setStep(draft.step);
       setData(draft.data);
       setHydrated(true);
       return;
     }
 
-    getUserData().then(({ profile }) => {
-      if (profile) setData(profile);
-      setHydrated(true);
-    });
+    getUserData()
+      .then(({ profile }) => {
+        setDebug(`profile: ${profile ? "found" : "null"}`);
+        if (profile) setData(profile);
+        setHydrated(true);
+      })
+      .catch((err) => {
+        setDebug(`threw: ${String(err)}`);
+        setHydrated(true);
+      });
   }, []);
 
   // Ne jamais persister un brouillon tant que rien de réel n'a été saisi :
@@ -138,6 +146,8 @@ export default function OnboardingPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <OnboardingHeader step={step} totalSteps={TOTAL_STEPS} />
+
+      <p className="mx-auto w-full max-w-xl px-5 pt-2 text-xs text-danger">DEBUG: {debug}</p>
 
       <main className="mx-auto w-full max-w-xl flex-1 px-5 py-8">
         {step === 1 && <StepConsentPhoto data={data} update={update} />}
