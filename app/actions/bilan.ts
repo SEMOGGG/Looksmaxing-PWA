@@ -70,16 +70,18 @@ type TextBlock = { type: "text"; text: string };
 
 const BILAN_PROMPT = `Analyse cette photo de profil dans le cadre d'une application de coaching bien-être et apparence, de façon bienveillante et constructive — jamais critique ni dévalorisante.
 
+D'abord, détermine ce qui est réellement visible sur la photo : uniquement le visage (portrait/selfie serré), ou aussi le torse/corps (photo plus large, en pied ou buste dégagé).
+
 Pour chacune de ces 5 catégories, donne un score de 0 à 100 (jamais en dessous de 40, l'évaluation doit rester encourageante) et une phrase de synthèse bienveillante en français :
-- "visage" (visage & symétrie)
-- "peau" (grain, teint, texture visibles)
-- "posture" (si visible sur la photo)
-- "tonus" (tonus musculaire, si visible)
-- "composition" (composition corporelle générale, si visible)
+- "visage" (visage & symétrie) — toujours évaluable sur un portrait
+- "peau" (grain, teint, texture visibles) — toujours évaluable sur un portrait
+- "posture" (uniquement si le buste ou le corps entier est visible)
+- "tonus" (tonus musculaire, uniquement si le torse, les bras ou le corps sont visibles — jamais depuis le seul visage)
+- "composition" (composition corporelle générale — pourcentage de graisse, sèche, masse musculaire — uniquement si le torse ou le corps est visible, jamais depuis le seul visage)
 
-Si une catégorie n'est pas évaluable depuis la photo (ex. posture non visible sur un portrait serré), donne un score neutre autour de 70 et une phrase générique encourageante plutôt que d'inventer une observation.
+Règle stricte pour "posture", "tonus" et "composition" : si seul le visage est visible sur la photo, tu DOIS mettre un score neutre de 70, "isFocus": false, et une phrase générique du type "Pas assez visible sur cette photo pour évaluer ce point — ajoutez une photo de corps pour une estimation plus précise." N'invente JAMAIS d'observation sur la silhouette, la graisse corporelle ou la masse musculaire à partir d'un simple visage : c'est trompeur et potentiellement décourageant à tort pour la personne.
 
-Marque "isFocus": true pour au maximum 2 catégories (celles avec le plus de marge de progression, présentées comme des opportunités, jamais comme des défauts), et false pour les autres (déjà des points forts).
+Marque "isFocus": true pour au maximum 2 catégories parmi celles réellement évaluables sur la photo (celles avec le plus de marge de progression, présentées comme des opportunités, jamais comme des défauts), et false pour les autres (déjà des points forts ou non évaluables).
 
 Ne commente jamais l'origine ethnique, le genre, l'âge perçu, un handicap visible ou toute autre caractéristique protégée — reste centré uniquement sur les 5 catégories ci-dessus.
 
