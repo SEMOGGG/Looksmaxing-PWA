@@ -22,7 +22,9 @@ export type Goal =
 
 export type OnboardingData = {
   consentGiven: boolean;
-  photoDataUrl: string | null;
+  photoDataUrl: string | null; // photo de face
+  photoProfileDataUrl: string | null; // photo de profil (visage de côté)
+  photoBodyDataUrl: string | null; // photo du corps, facultative
   age: string;
   sex: Sex | null;
   heightCm: string;
@@ -35,6 +37,8 @@ export type OnboardingData = {
 export const initialOnboardingData: OnboardingData = {
   consentGiven: false,
   photoDataUrl: null,
+  photoProfileDataUrl: null,
+  photoBodyDataUrl: null,
   age: "",
   sex: null,
   heightCm: "",
@@ -50,6 +54,8 @@ export const initialOnboardingData: OnboardingData = {
 export const demoProfile: OnboardingData = {
   consentGiven: true,
   photoDataUrl: null,
+  photoProfileDataUrl: null,
+  photoBodyDataUrl: null,
   age: "24",
   sex: "homme",
   heightCm: "178",

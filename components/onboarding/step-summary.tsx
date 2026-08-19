@@ -36,18 +36,30 @@ export function StepSummary({ data }: { data: OnboardingData }) {
       </p>
 
       <div className="mt-6 flex items-center gap-4 rounded-2xl border border-border bg-surface p-4">
-        {data.photoDataUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={data.photoDataUrl}
-            alt="Votre photo"
-            className="h-16 w-16 rounded-xl object-cover"
-          />
-        ) : (
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-surface-muted text-xs text-muted">
-            Pas de photo
-          </div>
-        )}
+        <div className="flex shrink-0 gap-1.5">
+          {[
+            { url: data.photoDataUrl, alt: "Photo de face" },
+            { url: data.photoProfileDataUrl, alt: "Photo de profil" },
+            ...(data.photoBodyDataUrl ? [{ url: data.photoBodyDataUrl, alt: "Photo de corps" }] : []),
+          ].map((photo, i) =>
+            photo.url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={i}
+                src={photo.url}
+                alt={photo.alt}
+                className="h-16 w-16 rounded-xl object-cover"
+              />
+            ) : (
+              <div
+                key={i}
+                className="flex h-16 w-16 items-center justify-center rounded-xl bg-surface-muted text-xs text-muted"
+              >
+                —
+              </div>
+            )
+          )}
+        </div>
         <div className="min-w-0">
           <p className="text-sm font-semibold text-foreground">
             {data.age ? `${data.age} ans` : "Âge non renseigné"} · {sexLabel}

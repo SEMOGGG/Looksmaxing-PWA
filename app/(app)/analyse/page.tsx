@@ -24,7 +24,7 @@ export default function AnalysePage() {
   useEffect(() => {
     Promise.all([getUserData(), getLatestBilan()]).then(([{ profile }, bilan]) => {
       if (profile) {
-        setHasPhoto(Boolean(profile.photoDataUrl));
+        setHasPhoto(Boolean(profile.photoDataUrl && profile.photoProfileDataUrl));
         setIsDemo(false);
       } else {
         setIsDemo(true);
@@ -105,10 +105,12 @@ export default function AnalysePage() {
             ) : (
               <p className="text-sm text-muted">
                 <Link href="/onboarding" className="font-medium text-accent-strong underline underline-offset-2">
-                  Ajoutez une photo à votre profil
+                  Ajoutez une photo de face et une photo de profil
                 </Link>{" "}
                 pour que votre bilan soit basé sur une vraie analyse IA plutôt que sur une
-                estimation générale.
+                estimation générale. Ajoutez aussi une photo de corps (facultative) pour
+                que le bilan évalue en plus votre posture, votre tonus et votre composition
+                corporelle.
               </p>
             )}
             {error && <p className="mt-2 text-xs text-danger">{error}</p>}

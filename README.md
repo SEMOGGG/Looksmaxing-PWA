@@ -88,9 +88,12 @@ l'usage facturé, pas sur un simple comptage.
   (lecture/écriture Supabase, vérification Clerk) : `getUserData`,
   `saveUserProfile`, `saveUserPlan`, `saveFaceShapeData`
 - `app/actions/bilan.ts` — bilan Analyse (score + catégories) généré par
-  Claude vision à partir de la photo de profil : 1/mois gratuit, illimité
+  Claude vision à partir des photos de face et de profil (obligatoires) et,
+  si fournie, de la photo de corps (facultative) : 1/mois gratuit, illimité
   Premium (dans le budget partagé) ; retombe sur le bilan mock
-  (`lib/analysis.ts`) si la personne n'a pas de photo
+  (`lib/analysis.ts`) si la personne n'a pas encore de photos. Sans photo de
+  corps, posture/tonus/composition restent neutres plutôt que devinés depuis
+  le seul visage
 - `app/(app)/communaute/actions.ts` — Server Actions de la Communauté
   (lecture/écriture Supabase, vérification Clerk, modération)
 - `app/actions/coach.ts` — Server Actions du Coach IA (vérification Premium,
@@ -147,8 +150,9 @@ l'usage facturé, pas sur un simple comptage.
       vrai modèle de modération IA), backend réel Clerk + Supabase
 - [x] Mentions légales, confidentialité, conditions d'utilisation
 - [x] Bilan Analyse (score + points forts/axes de progression) généré par
-      Claude vision à partir de la photo de profil — 1/mois gratuit,
-      illimité Premium ; bilan mock en repli si pas de photo
+      Claude vision à partir des photos de face/profil (obligatoires à
+      l'onboarding) et de corps (facultative) — 1/mois gratuit, illimité
+      Premium ; bilan mock en repli si pas encore de photos
 - [x] Coach IA (Premium) : chat avec Claude Haiku + recherche nutritionnelle
       réelle (USDA), garde-fous santé/sécurité, programmes d'entraînement
       personnalisés, conseils produits — budget mensuel réel par membre

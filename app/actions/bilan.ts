@@ -67,26 +67,43 @@ export async function getBilanHistory(): Promise<StoredBilan[]> {
 }
 
 type TextBlock = { type: "text"; text: string };
+type ImageBlock = { type: "image"; source: { type: "base64"; media_type: string; data: string } };
 
-const BILAN_PROMPT = `Analyse cette photo de profil dans le cadre d'une application de coaching bien-être et apparence, de façon bienveillante et constructive — jamais critique ni dévalorisante.
+function buildBilanPrompt(hasBodyPhoto: boolean): string {
+  const photoList = hasBodyPhoto
+    ? `Tu reçois 3 photos, dans cet ordre : (1) visage de face, (2) visage de profil, (3) corps.`
+    : `Tu reçois 2 photos, dans cet ordre : (1) visage de face, (2) visage de profil. Aucune photo de corps n'a été fournie.`;
 
-D'abord, détermine ce qui est réellement visible sur la photo : uniquement le visage (portrait/selfie serré), ou aussi le torse/corps (photo plus large, en pied ou buste dégagé).
+  const bodyRule = hasBodyPhoto
+    ? `La photo 3 (corps) te permet d'évaluer "posture", "tonus" et "composition" à partir de ce qui y est réellement visible — reste prudent, une estimation visuelle large plutôt qu'un chiffre trop précis.`
+    : `Aucune photo de corps n'a été fournie : pour "posture", "tonus" et "composition", tu DOIS mettre un score neutre de 70, "isFocus": false, et une phrase du type "Pas assez visible sur les photos fournies pour évaluer ce point — ajoutez une photo de corps pour une estimation plus précise." N'invente JAMAIS d'observation sur la silhouette, la graisse corporelle ou la masse musculaire à partir des seules photos de visage : c'est trompeur et potentiellement décourageant à tort pour la personne.`;
+
+  return `Analyse ces photos dans le cadre d'une application de coaching bien-être et apparence, de façon bienveillante et constructive — jamais critique ni dévalorisante.
+
+${photoList}
 
 Pour chacune de ces 5 catégories, donne un score de 0 à 100 (jamais en dessous de 40, l'évaluation doit rester encourageante) et une phrase de synthèse bienveillante en français :
-- "visage" (visage & symétrie) — toujours évaluable sur un portrait
-- "peau" (grain, teint, texture visibles) — toujours évaluable sur un portrait
-- "posture" (uniquement si le buste ou le corps entier est visible)
-- "tonus" (tonus musculaire, uniquement si le torse, les bras ou le corps sont visibles — jamais depuis le seul visage)
-- "composition" (composition corporelle générale — pourcentage de graisse, sèche, masse musculaire — uniquement si le torse ou le corps est visible, jamais depuis le seul visage)
+- "visage" (visage & symétrie, à partir des photos de face et de profil)
+- "peau" (grain, teint, texture visibles sur le visage)
+- "posture"
+- "tonus" (tonus musculaire)
+- "composition" (composition corporelle générale — silhouette, sèche, masse musculaire)
 
-Règle stricte pour "posture", "tonus" et "composition" : si seul le visage est visible sur la photo, tu DOIS mettre un score neutre de 70, "isFocus": false, et une phrase générique du type "Pas assez visible sur cette photo pour évaluer ce point — ajoutez une photo de corps pour une estimation plus précise." N'invente JAMAIS d'observation sur la silhouette, la graisse corporelle ou la masse musculaire à partir d'un simple visage : c'est trompeur et potentiellement décourageant à tort pour la personne.
+${bodyRule}
 
-Marque "isFocus": true pour au maximum 2 catégories parmi celles réellement évaluables sur la photo (celles avec le plus de marge de progression, présentées comme des opportunités, jamais comme des défauts), et false pour les autres (déjà des points forts ou non évaluables).
+Marque "isFocus": true pour au maximum 2 catégories parmi celles réellement évaluables (celles avec le plus de marge de progression, présentées comme des opportunités, jamais comme des défauts), et false pour les autres (déjà des points forts ou non évaluables).
 
 Ne commente jamais l'origine ethnique, le genre, l'âge perçu, un handicap visible ou toute autre caractéristique protégée — reste centré uniquement sur les 5 catégories ci-dessus.
 
 Réponds uniquement avec un objet JSON strict, sans texte autour ni balises markdown, au format exact :
 {"categories": [{"key": "visage", "score": <0-100>, "isFocus": <bool>, "summary": "<phrase>"}, {"key": "peau", "score": <0-100>, "isFocus": <bool>, "summary": "<phrase>"}, {"key": "posture", "score": <0-100>, "isFocus": <bool>, "summary": "<phrase>"}, {"key": "tonus", "score": <0-100>, "isFocus": <bool>, "summary": "<phrase>"}, {"key": "composition", "score": <0-100>, "isFocus": <bool>, "summary": "<phrase>"}]}`;
+}
+
+function parsePhotoDataUrl(dataUrl: string): { mediaType: string; base64Data: string } | null {
+  const match = dataUrl.match(/^data:(image\/[a-zA-Z]+);base64,(.+)$/);
+  if (!match) return null;
+  return { mediaType: match[1], base64Data: match[2] };
+}
 
 export async function generateBilan(): Promise<{ ok: true; result: StoredBilan } | { ok: false; error: string }> {
   const { userId } = await auth();
@@ -96,10 +113,11 @@ export async function generateBilan(): Promise<{ ok: true; result: StoredBilan }
   if (!allowed) return { ok: false, error: "Trop de tentatives, patientez avant de réessayer." };
 
   const { profile, plan } = await getUserData();
-  if (!profile?.photoDataUrl) {
+  if (!profile?.photoDataUrl || !profile?.photoProfileDataUrl) {
     return {
       ok: false,
-      error: "Ajoutez une photo à votre profil (depuis l'onboarding) pour générer un bilan personnalisé par IA.",
+      error:
+        "Ajoutez une photo de face et une photo de profil à votre profil (depuis l'onboarding) pour générer un bilan personnalisé par IA.",
     };
   }
 
@@ -143,12 +161,25 @@ export async function generateBilan(): Promise<{ ok: true; result: StoredBilan }
     return { ok: false, error: "Un bilan est déjà en cours de génération, patientez quelques secondes." };
   }
 
-  const match = profile.photoDataUrl.match(/^data:(image\/[a-zA-Z]+);base64,(.+)$/);
-  if (!match) return { ok: false, error: "Photo de profil invalide." };
-  const [, mediaType, base64Data] = match;
+  const face = parsePhotoDataUrl(profile.photoDataUrl);
+  const sideProfile = parsePhotoDataUrl(profile.photoProfileDataUrl);
+  if (!face || !sideProfile) return { ok: false, error: "Photo de face ou de profil invalide." };
+  const body = profile.photoBodyDataUrl ? parsePhotoDataUrl(profile.photoBodyDataUrl) : null;
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return { ok: false, error: "Configuration serveur manquante." };
+
+  const content: (TextBlock | ImageBlock)[] = [
+    { type: "text", text: "Photo 1 — visage de face :" },
+    { type: "image", source: { type: "base64", media_type: face.mediaType, data: face.base64Data } },
+    { type: "text", text: "Photo 2 — visage de profil :" },
+    { type: "image", source: { type: "base64", media_type: sideProfile.mediaType, data: sideProfile.base64Data } },
+  ];
+  if (body) {
+    content.push({ type: "text", text: "Photo 3 — corps :" });
+    content.push({ type: "image", source: { type: "base64", media_type: body.mediaType, data: body.base64Data } });
+  }
+  content.push({ type: "text", text: buildBilanPrompt(Boolean(body)) });
 
   let response: Response;
   try {
@@ -162,15 +193,7 @@ export async function generateBilan(): Promise<{ ok: true; result: StoredBilan }
       body: JSON.stringify({
         model: BILAN_MODEL,
         max_tokens: 700,
-        messages: [
-          {
-            role: "user",
-            content: [
-              { type: "image", source: { type: "base64", media_type: mediaType, data: base64Data } },
-              { type: "text", text: BILAN_PROMPT },
-            ],
-          },
-        ],
+        messages: [{ role: "user", content }],
       }),
     });
   } catch {

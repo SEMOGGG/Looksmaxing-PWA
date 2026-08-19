@@ -114,7 +114,7 @@ create table if not exists user_profiles (
   user_id text primary key,               -- Clerk user id
   plan text not null default 'free' check (plan in ('free', 'premium')),
   consent_given boolean not null default false,
-  photo_data_url text,
+  photo_data_url text,                    -- photo de face
   age text,
   sex text,
   height_cm text,
@@ -125,6 +125,12 @@ create table if not exists user_profiles (
   face_shape text,
   updated_at timestamptz not null default now()
 );
+
+-- Photo de profil (visage de côté) et photo de corps (facultative), en plus
+-- de la photo de face historique (photo_data_url) : le bilan Analyse ne peut
+-- évaluer posture/tonus/composition corporelle qu'avec la photo de corps.
+alter table user_profiles add column if not exists photo_profile_data_url text;
+alter table user_profiles add column if not exists photo_body_data_url text;
 
 alter table user_profiles enable row level security;
 -- Aucune policy pour le rôle "anon" : cette table n'est lue/écrite que par

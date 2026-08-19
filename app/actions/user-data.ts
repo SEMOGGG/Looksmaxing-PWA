@@ -12,6 +12,8 @@ type ProfileRow = {
   plan: string;
   consent_given: boolean;
   photo_data_url: string | null;
+  photo_profile_data_url: string | null;
+  photo_body_data_url: string | null;
   age: string | null;
   sex: string | null;
   height_cm: string | null;
@@ -26,6 +28,8 @@ function rowToProfile(row: ProfileRow): OnboardingData {
   return {
     consentGiven: row.consent_given,
     photoDataUrl: row.photo_data_url,
+    photoProfileDataUrl: row.photo_profile_data_url,
+    photoBodyDataUrl: row.photo_body_data_url,
     age: row.age ?? "",
     sex: (row.sex as OnboardingData["sex"]) ?? null,
     heightCm: row.height_cm ?? "",
@@ -52,7 +56,7 @@ export async function getUserData(): Promise<UserData> {
   const { data } = await supabase
     .from("user_profiles")
     .select(
-      "plan, consent_given, photo_data_url, age, sex, height_cm, weight_kg, activity_level, steps, goals, face_shape"
+      "plan, consent_given, photo_data_url, photo_profile_data_url, photo_body_data_url, age, sex, height_cm, weight_kg, activity_level, steps, goals, face_shape"
     )
     .eq("user_id", userId)
     .maybeSingle<ProfileRow>();
@@ -83,6 +87,8 @@ export async function saveUserProfile(
     user_id: userId,
     consent_given: parsed.data.consentGiven,
     photo_data_url: parsed.data.photoDataUrl,
+    photo_profile_data_url: parsed.data.photoProfileDataUrl,
+    photo_body_data_url: parsed.data.photoBodyDataUrl,
     age: parsed.data.age,
     sex: parsed.data.sex,
     height_cm: parsed.data.heightCm,

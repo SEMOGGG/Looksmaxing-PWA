@@ -18,6 +18,8 @@ export const photoDataUrlSchema = z
 export const onboardingProfileSchema = z.object({
   consentGiven: z.boolean(),
   photoDataUrl: photoDataUrlSchema.nullable(),
+  photoProfileDataUrl: photoDataUrlSchema.nullable(),
+  photoBodyDataUrl: photoDataUrlSchema.nullable(),
   age: z.string().regex(/^\d{0,3}$/, "Âge invalide"),
   sex: z.enum(["femme", "homme", "non_precise"]).nullable(),
   heightCm: z.string().regex(/^\d{0,3}$/, "Taille invalide"),

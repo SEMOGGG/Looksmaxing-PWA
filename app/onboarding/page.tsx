@@ -103,7 +103,7 @@ export default function OnboardingPage() {
   }
 
   const isStepValid = {
-    1: true,
+    1: Boolean(data.consentGiven && data.photoDataUrl && data.photoProfileDataUrl),
     2: Boolean(data.age && data.sex && data.heightCm && data.weightKg),
     3: Boolean(data.activityLevel),
     4: data.goals.length > 0,
