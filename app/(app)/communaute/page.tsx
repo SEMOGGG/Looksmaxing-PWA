@@ -110,11 +110,12 @@ export default function CommunautePage() {
             {/* Image libre de droits (Picsum), teintée pour coller à la DA sombre/violette du reste de l'app. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="https://picsum.photos/seed/faciem-communaute/1200/500?grayscale"
+              src="https://picsum.photos/seed/faciem-communaute/1200/500"
               alt=""
               className="h-full w-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-accent/30" />
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-accent/20 mix-blend-multiply" />
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
             <div className="absolute inset-0 flex flex-col justify-end p-5">
               <p className="font-heading text-lg font-semibold text-white sm:text-xl">
                 Progressez ensemble, sans jugement.
