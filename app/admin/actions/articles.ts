@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { adminArticleSchema } from "@/lib/validation";
+import { seedArticlesIfEmpty } from "@/app/(app)/communaute/actions";
 import type { Article } from "@/lib/community";
 
 type ActionResult = { ok: true } | { ok: false; error: string };
@@ -20,6 +21,8 @@ export async function listArticlesAdmin(): Promise<Article[]> {
   if (!guard.ok) return [];
 
   const supabase = getSupabaseServerClient();
+  await seedArticlesIfEmpty(supabase);
+
   const { data } = await supabase
     .from("community_articles")
     .select("id, category, title, excerpt, content, read_minutes")

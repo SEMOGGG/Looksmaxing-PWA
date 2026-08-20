@@ -516,7 +516,9 @@ export async function reportPost(
 // Injecte les articles de démonstration une seule fois si la table est
 // vide (même principe que seedIfEmpty pour les publications) — modifiables
 // ensuite depuis /admin/articles, sans plus jamais toucher au code source.
-async function seedArticlesIfEmpty(supabase: ReturnType<typeof getSupabaseServerClient>) {
+// Exportée pour que /admin/articles déclenche aussi ce remplissage (sinon un
+// admin qui visite le panel avant tout visiteur public verrait 0 articles).
+export async function seedArticlesIfEmpty(supabase: ReturnType<typeof getSupabaseServerClient>) {
   const { count } = await supabase
     .from("community_articles")
     .select("id", { count: "exact", head: true });

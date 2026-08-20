@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { adminIngredientSchema } from "@/lib/validation";
+import { seedIfEmpty } from "@/app/actions/skincare";
 import type { SkincareIngredient } from "@/lib/skincare";
 
 type ActionResult = { ok: true } | { ok: false; error: string };
@@ -23,6 +24,8 @@ export async function listIngredientsAdmin(): Promise<SkincareIngredient[]> {
   if (!guard.ok) return [];
 
   const supabase = getSupabaseServerClient();
+  await seedIfEmpty(supabase);
+
   const { data } = await supabase
     .from("skincare_ingredients")
     .select("id, name, what_it_does, how_to_use, caution, example_product, niche, needs")

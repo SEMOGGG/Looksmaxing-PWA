@@ -28,8 +28,11 @@ function rowToIngredient(row: IngredientRow): SkincareIngredient {
 }
 
 // Injecte la bibliothèque de démonstration une seule fois si la table est
-// vide — modifiable ensuite depuis /admin/routine.
-async function seedIfEmpty(supabase: ReturnType<typeof getSupabaseServerClient>) {
+// vide — modifiable ensuite depuis /admin/routine. Exportée pour que
+// /admin/routine puisse aussi déclencher ce remplissage : sans ça, un admin
+// qui visite le panel avant que quiconque n'ait ouvert /skincare verrait une
+// bibliothèque vide alors que la migration SQL s'est bien passée.
+export async function seedIfEmpty(supabase: ReturnType<typeof getSupabaseServerClient>) {
   const { count } = await supabase
     .from("skincare_ingredients")
     .select("id", { count: "exact", head: true });
