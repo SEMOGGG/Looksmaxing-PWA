@@ -446,13 +446,23 @@ function normalize(value: string) {
   return value.toLowerCase().normalize("NFD").replace(DIACRITICS_PATTERN, "");
 }
 
+// Mots-outils à ignorer pour que "j'ai des boutons" ne remonte pas toute la
+// bibliothèque à cause de "des" ou "ai" trouvés dans presque tous les textes.
+const STOPWORDS = new Set([
+  "le", "la", "les", "de", "des", "du", "un", "une", "et", "ou", "pour",
+  "avec", "sur", "au", "aux", "mon", "ma", "mes", "ton", "ta", "tes", "son",
+  "sa", "ses", "ce", "cet", "cette", "ces", "que", "qui", "quoi", "dont",
+  "j", "ai", "suis", "es", "est", "sont", "avoir", "etre", "jai", "tres",
+  "plus", "moins", "comment", "quel", "quelle",
+]);
+
 // Recherche par besoin exprimé librement ("j'ai des boutons", "peau sèche"...) :
-// tout mot de 2 caractères ou plus retrouvé dans le nom, l'usage ou les
-// mots-clés d'un ingrédient suffit à le faire remonter.
+// tout mot significatif retrouvé dans le nom, l'usage ou les mots-clés d'un
+// ingrédient suffit à le faire remonter.
 export function searchSkincareIngredients(query: string): SkincareIngredient[] {
   const words = normalize(query)
     .split(/[^a-z0-9]+/)
-    .filter((w) => w.length >= 2);
+    .filter((w) => w.length >= 2 && !STOPWORDS.has(w));
   if (words.length === 0) return skincareIngredients;
 
   return skincareIngredients.filter((ingredient) => {
