@@ -12,6 +12,7 @@ export type AdminDashboardStats = {
   pendingReports: number;
   totalArticles: number;
   totalIngredients: number;
+  pendingRecipes: number;
 };
 
 export async function getDashboardStats(): Promise<AdminDashboardStats | null> {
@@ -29,6 +30,7 @@ export async function getDashboardStats(): Promise<AdminDashboardStats | null> {
     { count: pendingReports },
     { count: totalArticles },
     { count: totalIngredients },
+    { count: pendingRecipes },
   ] = await Promise.all([
     client.users.getCount(),
     supabase.from("user_profiles").select("user_id", { count: "exact", head: true }).eq("plan", "premium"),
@@ -37,6 +39,7 @@ export async function getDashboardStats(): Promise<AdminDashboardStats | null> {
     supabase.from("community_reports").select("id", { count: "exact", head: true }).eq("resolved", false),
     supabase.from("community_articles").select("id", { count: "exact", head: true }),
     supabase.from("skincare_ingredients").select("id", { count: "exact", head: true }),
+    supabase.from("recipes").select("id", { count: "exact", head: true }).eq("status", "pending"),
   ]);
 
   return {
@@ -47,5 +50,6 @@ export async function getDashboardStats(): Promise<AdminDashboardStats | null> {
     pendingReports: pendingReports ?? 0,
     totalArticles: totalArticles ?? 0,
     totalIngredients: totalIngredients ?? 0,
+    pendingRecipes: pendingRecipes ?? 0,
   };
 }

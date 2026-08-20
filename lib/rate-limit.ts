@@ -29,6 +29,9 @@ const limiters = {
   photoAnalysis: redis ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(10, "3600 s") }) : null,
   // Sauvegarde de profil/plan/forme de visage.
   profileWrite: redis ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(20, "60 s") }) : null,
+  // Propositions de recettes par les membres (livre de recettes Nutrition) :
+  // faible plafond, chaque soumission part en file de modération admin.
+  recipeSubmit: redis ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(5, "86400 s") }) : null,
 } as const;
 
 export type RateLimitName = keyof typeof limiters;

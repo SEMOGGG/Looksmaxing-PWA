@@ -3,12 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getDashboardStats, type AdminDashboardStats } from "./actions/dashboard";
-import { UsersIcon, MessageIcon, FlagIcon, TrophyIcon, HeartIcon, PillIcon } from "@/components/icons";
+import { UsersIcon, MessageIcon, FlagIcon, TrophyIcon, HeartIcon, PillIcon, BookIcon } from "@/components/icons";
 
 const sections = [
   { href: "/admin/users", label: "Utilisateurs", description: "Rechercher, voir les profils, changer de plan" },
   { href: "/admin/articles", label: "Articles", description: "Contenu éditorial de l'onglet Communauté" },
   { href: "/admin/routine", label: "Bibliothèque skincare", description: "Ingrédients/produits affichés sur /skincare" },
+  { href: "/admin/recipes", label: "Recettes", description: "Livre de recettes affiché sur /nutrition/recettes" },
   { href: "/admin/community", label: "Communauté", description: "Modération des publications, commentaires, signalements" },
   { href: "/admin/badges", label: "Badges & points", description: "Paliers de réputation, réglages, ajustements manuels" },
 ];
@@ -34,6 +35,7 @@ export default function AdminDashboardPage() {
         { icon: HeartIcon, label: "Commentaires", value: stats.totalComments },
         { icon: FlagIcon, label: "Signalements en attente", value: stats.pendingReports },
         { icon: PillIcon, label: "Produits skincare", value: stats.totalIngredients },
+        { icon: BookIcon, label: "Recettes en attente", value: stats.pendingRecipes },
       ]
     : [];
 

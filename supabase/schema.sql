@@ -444,3 +444,39 @@ create index if not exists community_point_adjustments_user_idx on community_poi
 alter table community_point_adjustments enable row level security;
 -- Aucune policy pour "anon" : lu/écrit uniquement par les Server Actions
 -- admin, après vérification du rôle admin.
+
+-- Livre de recettes de l'onglet Nutrition (voir lib/recipes.ts). Les
+-- recettes éditoriales (créées depuis /admin/recipes) partent directement en
+-- statut "approved" ; les recettes proposées par les membres (formulaire
+-- public sur /nutrition/recettes) partent en "pending" et n'apparaissent
+-- dans le livre public qu'une fois approuvées par un admin.
+create table if not exists recipes (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  description text not null,
+  tags text[] not null default '{}',
+  prep_minutes integer not null default 15,
+  servings integer not null default 1,
+  calories integer not null default 0,
+  protein_g integer not null default 0,
+  carbs_g integer not null default 0,
+  ingredients text[] not null default '{}',
+  steps text[] not null default '{}',
+  tip text,
+  status text not null default 'pending',
+  submitted_by text,
+  submitted_by_name text,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists recipes_status_idx on recipes (status, sort_order);
+create index if not exists recipes_submitted_by_idx on recipes (submitted_by);
+
+alter table recipes enable row level security;
+create policy "Lecture publique des recettes approuvées"
+  on recipes for select
+  using (status = 'approved');
+-- Écriture (dépôt d'une proposition, modération admin) uniquement via les
+-- Server Actions, qui utilisent la clé de service et contournent RLS.

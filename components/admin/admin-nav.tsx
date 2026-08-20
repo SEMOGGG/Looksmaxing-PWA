@@ -10,6 +10,7 @@ const links = [
   { href: "/admin/users", label: "Utilisateurs" },
   { href: "/admin/articles", label: "Articles" },
   { href: "/admin/routine", label: "Bibliothèque skincare" },
+  { href: "/admin/recipes", label: "Recettes" },
   { href: "/admin/community", label: "Communauté" },
   { href: "/admin/badges", label: "Badges & points" },
 ];

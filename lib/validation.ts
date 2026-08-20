@@ -121,3 +121,22 @@ export const pointAdjustmentSchema = z.object({
 });
 
 export const moderationStatusSchema = z.enum(["approved", "pending", "flagged", "removed"]);
+
+// Recettes du livre de recettes (/nutrition/recettes) : proposées par un
+// admin (statut "approved" direct) ou par un membre (statut "pending", en
+// attente de validation depuis /admin/recipes), voir app/actions/recipes.ts.
+export const recipeStatusSchema = z.enum(["pending", "approved", "rejected"]);
+
+export const recipeSchema = z.object({
+  title: z.string().trim().min(1).max(150),
+  description: z.string().trim().min(1).max(300),
+  tags: z.array(z.string().trim().min(1).max(30)).max(8),
+  prepMinutes: z.number().int().min(1).max(240),
+  servings: z.number().int().min(1).max(20),
+  calories: z.number().int().min(0).max(5000),
+  proteinG: z.number().int().min(0).max(500),
+  carbsG: z.number().int().min(0).max(500),
+  ingredients: z.array(z.string().trim().min(1).max(200)).min(1).max(30),
+  steps: z.array(z.string().trim().min(1).max(500)).min(1).max(20),
+  tip: z.string().trim().max(400).nullable(),
+});

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { AppTopBar } from "@/components/app-top-bar";
 import { DemoProfileBanner } from "@/components/demo-profile-banner";
 import { HealthDisclaimer } from "@/components/health-disclaimer";
-import { LockIcon } from "@/components/icons";
+import { LockIcon, BookIcon } from "@/components/icons";
 import { WeightTracker } from "@/components/weight-tracker";
 import { BodyComposition } from "@/components/body-composition";
 import { demoProfile, type OnboardingData } from "@/lib/onboarding";
@@ -74,7 +74,22 @@ export default function NutritionPage() {
           <HealthDisclaimer />
         </div>
 
-        <div className="mt-6 rounded-2xl border border-border bg-surface p-5">
+        <Link
+          href="/nutrition/recettes"
+          className="mt-6 flex items-center gap-3 rounded-2xl border border-border bg-surface p-5 transition-colors hover:border-accent/40"
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-strong">
+            <BookIcon className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-foreground">Livre de recettes</p>
+            <p className="text-xs text-muted">
+              Riches en protéines, en glucides ou en potassium, à la whey ou à la crème de riz.
+            </p>
+          </div>
+        </Link>
+
+        <div className="mt-4 rounded-2xl border border-border bg-surface p-5">
           <h2 className="text-base font-semibold text-foreground">Vos besoins énergétiques</h2>
           <div className="mt-4 grid grid-cols-2 gap-4">
             <div>
