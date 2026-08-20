@@ -9,6 +9,19 @@ import { getUserData } from "@/app/actions/user-data";
 import { getCoachHistory, sendCoachMessage } from "@/app/actions/coach";
 import type { CoachMessage } from "@/lib/coach";
 
+// Filet de sécurité si le modèle réintroduit du Markdown malgré la
+// consigne du prompt (voir COACH_SYSTEM_PROMPT) : sans ça, "**mot**"
+// s'affiche tel quel au lieu d'un texte en gras.
+function renderMessageContent(content: string) {
+  return content.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+    part.startsWith("**") && part.endsWith("**") && part.length > 4 ? (
+      <strong key={i}>{part.slice(2, -2)}</strong>
+    ) : (
+      part
+    )
+  );
+}
+
 const WELCOME: CoachMessage = {
   id: "welcome",
   role: "assistant",
@@ -99,7 +112,7 @@ export default function CoachPage() {
                       : "mr-auto border border-border bg-surface text-foreground"
                   }`}
                 >
-                  {message.content}
+                  {renderMessageContent(message.content)}
                 </div>
               ))}
               {sending && (
