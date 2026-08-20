@@ -6,11 +6,12 @@ import { useUser, UserButton } from "@clerk/nextjs";
 import { AppTopBar } from "@/components/app-top-bar";
 import { DemoProfileBanner } from "@/components/demo-profile-banner";
 import { ProgressChart } from "@/components/progress-chart";
-import { CheckIcon, LockIcon } from "@/components/icons";
+import { CheckIcon, LockIcon, ShieldCheckIcon } from "@/components/icons";
 import { DeleteAccountSection } from "@/components/delete-account-section";
 import { WeightTracker } from "@/components/weight-tracker";
 import { getUserData, saveUserPlan } from "@/app/actions/user-data";
 import { getBilanHistory, type StoredBilan } from "@/app/actions/bilan";
+import { checkIsAdmin } from "@/app/actions/admin-status";
 import { activityLevels, goalOptions } from "@/lib/onboarding";
 import type { OnboardingData } from "@/lib/onboarding";
 import type { Plan } from "@/lib/user-data";
@@ -43,20 +44,24 @@ export default function ComptePage() {
   const [isDemo, setIsDemo] = useState(false);
   const [plan, setPlan] = useState<Plan>("free");
   const [history, setHistory] = useState<StoredBilan[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    Promise.all([getUserData(), getBilanHistory()]).then(([{ profile: saved, plan: userPlan }, bilans]) => {
-      if (saved) {
-        setProfile(saved);
-        setIsDemo(false);
-      } else {
-        setIsDemo(true);
+    Promise.all([getUserData(), getBilanHistory(), checkIsAdmin()]).then(
+      ([{ profile: saved, plan: userPlan }, bilans, admin]) => {
+        if (saved) {
+          setProfile(saved);
+          setIsDemo(false);
+        } else {
+          setIsDemo(true);
+        }
+        setPlan(userPlan);
+        setHistory(bilans);
+        setIsAdmin(admin);
+        setReady(true);
       }
-      setPlan(userPlan);
-      setHistory(bilans);
-      setReady(true);
-    });
+    );
   }, []);
 
   function handlePlanChange(next: Plan) {
@@ -92,6 +97,19 @@ export default function ComptePage() {
               </p>
             </div>
           </div>
+        )}
+
+        {isAdmin && (
+          <Link
+            href="/admin"
+            className="mt-4 flex items-center gap-3 rounded-2xl border border-accent/40 bg-accent/10 p-4 transition-colors hover:border-accent"
+          >
+            <ShieldCheckIcon className="h-6 w-6 shrink-0 text-accent" />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-foreground">Administration</p>
+              <p className="text-xs text-muted">Gérer les articles, produits, membres et badges.</p>
+            </div>
+          </Link>
         )}
 
         {isDemo && <DemoProfileBanner />}
