@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AppTopBar } from "@/components/app-top-bar";
 import { ProgressChart } from "@/components/progress-chart";
-import { CheckIcon, LockIcon, SparklesIcon } from "@/components/icons";
+import { CheckIcon, LockIcon, SparklesIcon, TrashIcon, XIcon } from "@/components/icons";
 import { getUserData } from "@/app/actions/user-data";
-import { getBilanHistory, type StoredBilan } from "@/app/actions/bilan";
+import { getBilanHistory, deleteBilan, type StoredBilan } from "@/app/actions/bilan";
 import type { Plan } from "@/lib/user-data";
 
 const dayMonth = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short" });
@@ -25,10 +25,18 @@ function PhotoTimeline({
   title,
   entries,
   getUrl,
+  confirmingId,
+  onRequestDelete,
+  onConfirmDelete,
+  onCancelDelete,
 }: {
   title: string;
   entries: StoredBilan[];
   getUrl: (entry: StoredBilan) => string | null;
+  confirmingId: string | null;
+  onRequestDelete: (id: string) => void;
+  onConfirmDelete: (id: string) => void;
+  onCancelDelete: () => void;
 }) {
   const withPhoto = entries.filter((entry) => getUrl(entry));
   if (withPhoto.length === 0) return null;
@@ -39,8 +47,8 @@ function PhotoTimeline({
       <div className="mt-2 flex gap-3 overflow-x-auto pb-2">
         {withPhoto.map((entry) => (
           <div
-            key={entry.createdAt}
-            className="w-28 shrink-0 rounded-2xl border border-border bg-surface p-2 text-center transition-colors hover:border-accent/40"
+            key={entry.id}
+            className="relative w-28 shrink-0 rounded-2xl border border-border bg-surface p-2 text-center transition-colors hover:border-accent/40"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -52,6 +60,37 @@ function PhotoTimeline({
               {dayMonth.format(new Date(entry.createdAt))}
             </p>
             <p className="text-xs font-semibold text-accent-strong">{entry.overallScore}/100</p>
+
+            {confirmingId === entry.id ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 rounded-2xl bg-background/95 p-2">
+                <p className="text-[10px] leading-tight text-foreground">Supprimer ce bilan ?</p>
+                <div className="flex gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => onConfirmDelete(entry.id)}
+                    className="rounded-full bg-danger px-2 py-1 text-[10px] font-semibold text-white"
+                  >
+                    Oui
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onCancelDelete}
+                    className="rounded-full border border-border px-2 py-1 text-[10px] font-medium text-muted"
+                  >
+                    Non
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onRequestDelete(entry.id)}
+                aria-label="Supprimer ce bilan"
+                className="absolute top-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white transition-colors hover:bg-danger"
+              >
+                <TrashIcon className="h-3 w-3" />
+              </button>
+            )}
           </div>
         ))}
       </div>
@@ -63,6 +102,8 @@ export default function SuiviPage() {
   const [plan, setPlan] = useState<Plan>("free");
   const [history, setHistory] = useState<StoredBilan[]>([]);
   const [ready, setReady] = useState(false);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     Promise.all([getUserData(), getBilanHistory()]).then(([{ plan: userPlan }, hist]) => {
@@ -71,6 +112,16 @@ export default function SuiviPage() {
       setReady(true);
     });
   }, []);
+
+  async function handleConfirmDelete(id: string) {
+    setDeleting(true);
+    const result = await deleteBilan(id);
+    setDeleting(false);
+    setConfirmingId(null);
+    if (result.ok) {
+      setHistory((prev) => prev.filter((entry) => entry.id !== id));
+    }
+  }
 
   if (!ready) return null;
 
@@ -136,21 +187,39 @@ export default function SuiviPage() {
 
             {hasAnyPhoto && (
               <>
-                <h2 className="mt-8 text-base font-semibold text-foreground">Vos photos dans le temps</h2>
+                <div className="mt-8 flex items-center justify-between gap-2">
+                  <h2 className="text-base font-semibold text-foreground">Vos photos dans le temps</h2>
+                  {deleting && <p className="text-xs text-muted">Suppression…</p>}
+                </div>
+                <p className="mt-1 text-xs text-muted">
+                  Des doublons ou un test qui fausse le suivi ? Survolez une photo pour la supprimer.
+                </p>
                 <PhotoTimeline
                   title="Visage de face"
                   entries={chronological}
                   getUrl={(entry) => entry.photoDataUrl}
+                  confirmingId={confirmingId}
+                  onRequestDelete={setConfirmingId}
+                  onConfirmDelete={handleConfirmDelete}
+                  onCancelDelete={() => setConfirmingId(null)}
                 />
                 <PhotoTimeline
                   title="Visage de profil"
                   entries={chronological}
                   getUrl={(entry) => entry.photoProfileDataUrl}
+                  confirmingId={confirmingId}
+                  onRequestDelete={setConfirmingId}
+                  onConfirmDelete={handleConfirmDelete}
+                  onCancelDelete={() => setConfirmingId(null)}
                 />
                 <PhotoTimeline
                   title="Corps"
                   entries={chronological}
                   getUrl={(entry) => entry.photoBodyDataUrl}
+                  confirmingId={confirmingId}
+                  onRequestDelete={setConfirmingId}
+                  onConfirmDelete={handleConfirmDelete}
+                  onCancelDelete={() => setConfirmingId(null)}
                 />
               </>
             )}
@@ -222,18 +291,54 @@ export default function SuiviPage() {
 
             <h2 className="mt-8 text-base font-semibold text-foreground">Historique complet</h2>
             <div className="mt-3 flex flex-col gap-2.5">
-              {history.map((entry) => (
-                <div
-                  key={entry.createdAt}
-                  className="flex items-center justify-between rounded-2xl border border-border bg-surface p-4"
-                >
-                  <span className="text-sm text-foreground">{fullDate.format(new Date(entry.createdAt))}</span>
-                  <span className="font-heading text-lg font-semibold text-accent-strong">
-                    {entry.overallScore}
-                    <span className="text-xs font-normal text-muted"> /100</span>
-                  </span>
-                </div>
-              ))}
+              {history.map((entry) =>
+                confirmingId === entry.id ? (
+                  <div
+                    key={entry.id}
+                    className="flex items-center justify-between gap-3 rounded-2xl border border-danger/40 bg-surface p-4"
+                  >
+                    <span className="text-sm text-foreground">Supprimer ce bilan définitivement ?</span>
+                    <div className="flex shrink-0 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleConfirmDelete(entry.id)}
+                        className="rounded-full bg-danger px-3 py-1.5 text-xs font-semibold text-white"
+                      >
+                        Confirmer
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmingId(null)}
+                        className="flex h-7 w-7 items-center justify-center rounded-full border border-border text-muted"
+                        aria-label="Annuler"
+                      >
+                        <XIcon className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    key={entry.id}
+                    className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-4 transition-colors hover:border-accent/30"
+                  >
+                    <span className="text-sm text-foreground">{fullDate.format(new Date(entry.createdAt))}</span>
+                    <div className="flex shrink-0 items-center gap-3">
+                      <span className="font-heading text-lg font-semibold text-accent-strong">
+                        {entry.overallScore}
+                        <span className="text-xs font-normal text-muted"> /100</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmingId(entry.id)}
+                        aria-label="Supprimer ce bilan"
+                        className="text-muted transition-colors hover:text-danger"
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                )
+              )}
             </div>
 
             <Link

@@ -205,7 +205,7 @@ export default function ComptePage() {
           )}
           {visibleHistory.map((entry) => (
             <div
-              key={entry.createdAt}
+              key={entry.id}
               className="flex items-center justify-between rounded-2xl border border-border bg-surface p-4 transition-colors hover:border-accent/50"
             >
               <span className="text-sm text-foreground">

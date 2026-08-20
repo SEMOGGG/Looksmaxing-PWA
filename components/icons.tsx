@@ -229,6 +229,15 @@ export function ThumbsUpIcon(props: IconProps) {
   );
 }
 
+export function TrashIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M5 7h14M9 7V5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 5v2m2 0-.7 12.1a2 2 0 0 1-2 1.9H9.7a2 2 0 0 1-2-1.9L7 7h10Z" />
+      <path d="M10 11v6M14 11v6" />
+    </svg>
+  );
+}
+
 export function HeartIcon(props: IconProps) {
   return (
     <svg {...base} {...props}>

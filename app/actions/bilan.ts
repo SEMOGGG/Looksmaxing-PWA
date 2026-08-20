@@ -22,6 +22,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 const CATEGORY_KEYS = Object.keys(CATEGORY_LABELS);
 
 export type StoredBilan = AnalysisResult & {
+  id: string;
   createdAt: string;
   photoDataUrl: string | null;
   photoProfileDataUrl: string | null;
@@ -38,6 +39,7 @@ export type NewBilanPhotos = {
 };
 
 type BilanRow = {
+  id: string;
   overall_score: number;
   categories: AnalysisCategory[];
   created_at: string;
@@ -48,6 +50,7 @@ type BilanRow = {
 
 function rowToStoredBilan(row: BilanRow): StoredBilan {
   return {
+    id: row.id,
     overallScore: row.overall_score,
     categories: row.categories,
     createdAt: row.created_at,
@@ -64,7 +67,7 @@ export async function getLatestBilan(): Promise<StoredBilan | null> {
   const supabase = getSupabaseServerClient();
   const { data } = await supabase
     .from("bilans")
-    .select("overall_score, categories, created_at, photo_data_url, photo_profile_data_url, photo_body_data_url")
+    .select("id, overall_score, categories, created_at, photo_data_url, photo_profile_data_url, photo_body_data_url")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -83,7 +86,7 @@ export async function getBilanHistory(): Promise<StoredBilan[]> {
   const supabase = getSupabaseServerClient();
   const { data } = await supabase
     .from("bilans")
-    .select("overall_score, categories, created_at, photo_data_url, photo_profile_data_url, photo_body_data_url")
+    .select("id, overall_score, categories, created_at, photo_data_url, photo_profile_data_url, photo_body_data_url")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(24)
@@ -226,7 +229,7 @@ export async function generateBilan(
         photo_profile_data_url: photoProfileDataUrl,
         photo_body_data_url: photoBodyDataUrl,
       })
-      .select("overall_score, categories, created_at, photo_data_url, photo_profile_data_url, photo_body_data_url")
+      .select("id, overall_score, categories, created_at, photo_data_url, photo_profile_data_url, photo_body_data_url")
       .single<BilanRow>();
 
     if (reuseError || !inserted) {
@@ -344,18 +347,22 @@ export async function generateBilan(
   });
   const overallScore = Math.round(categories.reduce((sum, c) => sum + c.score, 0) / categories.length);
 
-  const { error } = await supabase.from("bilans").insert({
-    user_id: userId,
-    overall_score: overallScore,
-    categories,
-    photo_data_url: photoDataUrl,
-    photo_profile_data_url: photoProfileDataUrl,
-    photo_body_data_url: photoBodyDataUrl,
-    input_tokens: data.usage?.input_tokens ?? 0,
-    output_tokens: data.usage?.output_tokens ?? 0,
-  });
-  if (error) {
-    return { ok: false, error: `Une erreur est survenue lors de l'enregistrement (${error.message}).` };
+  const { data: insertedRow, error } = await supabase
+    .from("bilans")
+    .insert({
+      user_id: userId,
+      overall_score: overallScore,
+      categories,
+      photo_data_url: photoDataUrl,
+      photo_profile_data_url: photoProfileDataUrl,
+      photo_body_data_url: photoBodyDataUrl,
+      input_tokens: data.usage?.input_tokens ?? 0,
+      output_tokens: data.usage?.output_tokens ?? 0,
+    })
+    .select("id")
+    .single();
+  if (error || !insertedRow) {
+    return { ok: false, error: `Une erreur est survenue lors de l'enregistrement (${error?.message ?? ""}).` };
   }
 
   // Si de nouvelles photos ont été apportées pour ce bilan, elles deviennent
@@ -373,6 +380,7 @@ export async function generateBilan(
   return {
     ok: true,
     result: {
+      id: insertedRow.id,
       overallScore,
       categories,
       createdAt: new Date().toISOString(),
@@ -381,4 +389,19 @@ export async function generateBilan(
       photoBodyDataUrl,
     },
   };
+}
+
+// Supprime un bilan précis (score + photos qui lui sont associées) : sert
+// notamment à retirer des doublons de test qui faussent le graphique de
+// progression et le suivi photo sur la page Suivi. `.eq("user_id", userId)`
+// empêche de supprimer le bilan de quelqu'un d'autre même en cas d'id deviné.
+export async function deleteBilan(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { userId } = await auth();
+  if (!userId) return { ok: false, error: "Connectez-vous pour gérer votre suivi." };
+
+  const supabase = getSupabaseServerClient();
+  const { error } = await supabase.from("bilans").delete().eq("id", id).eq("user_id", userId);
+
+  if (error) return { ok: false, error: "Impossible de supprimer ce bilan, réessayez." };
+  return { ok: true };
 }
