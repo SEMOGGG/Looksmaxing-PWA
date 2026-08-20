@@ -27,7 +27,7 @@ export function SiteHeader() {
               >
                 Mon espace
               </Link>
-              <UserButton afterSignOutUrl="/" />
+              <UserButton />
             </>
           ) : (
             <>
