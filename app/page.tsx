@@ -1,13 +1,14 @@
-import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { Logo } from "@/components/logo";
 import { PhoneMockup } from "@/components/phone-mockup";
+import { Reveal } from "@/components/reveal";
+import { HeroCta, FinalCta } from "@/components/hero-cta";
 import {
-  ArrowRightIcon,
   CameraIcon,
   CheckIcon,
   DropletIcon,
+  FlagIcon,
   LeafIcon,
   LockIcon,
   SparklesIcon,
@@ -16,22 +17,34 @@ import { APP_NAME } from "@/lib/navigation";
 
 const demoScreens = [
   {
-    src: "/marketing/screenshot-analyse.jpg",
+    src: "/marketing/screenshot-analyse.png",
     alt: "Capture d'écran du bilan Analyse dans l'app Faciem, avec le score global",
     title: "Un bilan clair, en un coup d'œil",
     description: "Un score global et une analyse par catégorie, générés par IA à partir de vos photos.",
   },
   {
-    src: "/marketing/screenshot-coach.jpg",
+    src: "/marketing/screenshot-coach.png",
     alt: "Capture d'écran d'une conversation avec le Coach IA dans l'app Faciem",
     title: "Un coach disponible au quotidien",
     description: "Des conseils concrets et personnalisés, à chaque fois que vous en avez besoin.",
   },
   {
-    src: "/marketing/screenshot-nutrition.jpg",
+    src: "/marketing/screenshot-nutrition.png",
     alt: "Capture d'écran du plan nutritionnel dans l'app Faciem, avec besoins caloriques et macronutriments",
     title: "Un plan nutrition sur mesure",
     description: "Vos besoins caloriques et votre répartition de macros, calculés et expliqués simplement.",
+  },
+  {
+    src: "/marketing/screenshot-routine.png",
+    alt: "Capture d'écran de la routine skincare du matin dans l'app Faciem",
+    title: "Une routine skincare guidée",
+    description: "Chaque étape expliquée simplement, matin et soir, pour une routine qui tient dans le temps.",
+  },
+  {
+    src: "/marketing/screenshot-communaute.png",
+    alt: "Capture d'écran de la Communauté Faciem, avec des articles sur l'apparence et le bien-être",
+    title: "Une communauté qui partage",
+    description: "Des articles courts et concrets, écrits pour avancer, jamais pour culpabiliser.",
   },
 ];
 
@@ -64,19 +77,19 @@ const benefits = [
 
 const steps = [
   {
-    number: "01",
+    icon: CameraIcon,
     title: "Vous partagez quelques informations",
     description:
       "Une photo (avec votre consentement explicite) et un court questionnaire sur vos objectifs et votre mode de vie.",
   },
   {
-    number: "02",
+    icon: SparklesIcon,
     title: "Nous préparons votre bilan",
     description:
       "Une synthèse claire de votre profil : points forts, axes de travail et recommandations personnalisées.",
   },
   {
-    number: "03",
+    icon: FlagIcon,
     title: "Vous avancez à votre rythme",
     description:
       "Un plan nutrition, une routine skincare et un suivi pensés pour s'intégrer simplement à votre quotidien.",
@@ -122,34 +135,23 @@ export default function LandingPage() {
                 Un espace pensé pour vous encourager, jamais pour vous juger.
               </p>
 
-              <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-start">
-                <Link
-                  href="/onboarding"
-                  className="glow bg-gradient-accent inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3.5 text-sm font-semibold text-white transition-transform hover:scale-[1.02] sm:w-auto"
-                >
-                  Commencer
-                  <ArrowRightIcon className="h-4 w-4" />
-                </Link>
-                <span className="text-xs text-muted">
-                  Gratuit pour commencer · réservé aux 18 ans et plus
-                </span>
-              </div>
+              <HeroCta />
             </div>
 
-            <div className="relative mx-auto flex h-[340px] w-full max-w-sm items-center justify-center sm:h-[420px]">
+            <Reveal className="relative mx-auto flex h-[340px] w-full max-w-sm items-center justify-center sm:h-[420px]">
               <PhoneMockup
-                src="/marketing/screenshot-analyse.jpg"
+                src="/marketing/screenshot-analyse.png"
                 alt="Capture d'écran du bilan Analyse dans l'app Faciem"
                 tilt={-6}
                 className="absolute left-2 top-6 z-10 max-w-[190px] opacity-90 sm:top-2 sm:max-w-[210px]"
               />
               <PhoneMockup
-                src="/marketing/screenshot-coach.jpg"
+                src="/marketing/screenshot-coach.png"
                 alt="Capture d'écran d'une conversation avec le Coach IA dans l'app Faciem"
                 tilt={5}
                 className="glow relative z-20 max-w-[210px] sm:max-w-[230px]"
               />
-            </div>
+            </Reveal>
           </div>
         </section>
 
@@ -166,15 +168,21 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div className="mt-10 grid grid-cols-1 gap-10 sm:grid-cols-3 sm:gap-6">
-              {demoScreens.map((screen) => (
-                <div key={screen.src} className="flex flex-col items-center text-center">
-                  <PhoneMockup src={screen.src} alt={screen.alt} className="max-w-[200px]" />
-                  <h3 className="mt-5 text-base font-semibold text-foreground">{screen.title}</h3>
-                  <p className="mt-1.5 max-w-[220px] text-sm leading-relaxed text-muted">
+            <div className="mt-10 grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-3 sm:gap-x-6">
+              {demoScreens.map((screen, i) => (
+                <Reveal
+                  key={screen.src}
+                  delay={(i % 3) * 120}
+                  className="flex flex-col items-center text-center"
+                >
+                  <PhoneMockup src={screen.src} alt={screen.alt} className="max-w-[150px] sm:max-w-[200px]" />
+                  <h3 className="mt-5 text-sm font-semibold text-foreground sm:text-base">
+                    {screen.title}
+                  </h3>
+                  <p className="mt-1.5 max-w-[200px] text-xs leading-relaxed text-muted sm:text-sm">
                     {screen.description}
                   </p>
-                </div>
+                </Reveal>
               ))}
             </div>
           </div>
@@ -194,21 +202,20 @@ export default function LandingPage() {
             </div>
 
             <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {benefits.map((benefit) => (
-                <div
-                  key={benefit.title}
-                  className="group rounded-2xl border border-border bg-surface p-5 transition-colors hover:border-accent/50"
-                >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-soft text-accent-strong">
-                    <benefit.icon className="h-5 w-5" />
+              {benefits.map((benefit, i) => (
+                <Reveal key={benefit.title} delay={(i % 2) * 120}>
+                  <div className="group h-full rounded-2xl border border-border bg-surface p-5 transition-colors hover:border-accent/50">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-soft text-accent-strong">
+                      <benefit.icon className="h-5 w-5" />
+                    </div>
+                    <h3 className="mt-4 text-base font-semibold text-foreground">
+                      {benefit.title}
+                    </h3>
+                    <p className="mt-1.5 text-sm leading-relaxed text-muted">
+                      {benefit.description}
+                    </p>
                   </div>
-                  <h3 className="mt-4 text-base font-semibold text-foreground">
-                    {benefit.title}
-                  </h3>
-                  <p className="mt-1.5 text-sm leading-relaxed text-muted">
-                    {benefit.description}
-                  </p>
-                </div>
+                </Reveal>
               ))}
             </div>
           </div>
@@ -222,31 +229,38 @@ export default function LandingPage() {
             </h2>
           </div>
 
-          <ol className="mt-10 flex flex-col gap-4">
-            {steps.map((step) => (
-              <li
-                key={step.number}
-                className="flex gap-4 rounded-2xl border border-border bg-surface p-5"
-              >
-                <span className="text-gradient font-heading shrink-0 text-2xl font-semibold">
-                  {step.number}
-                </span>
-                <div>
-                  <h3 className="text-base font-semibold text-foreground">{step.title}</h3>
-                  <p className="mt-1.5 text-sm leading-relaxed text-muted">
-                    {step.description}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ol>
+          <div className="relative mt-12">
+            <div
+              aria-hidden
+              className="absolute top-6 bottom-6 left-6 w-px bg-border sm:left-7"
+            />
+            <ol className="flex flex-col gap-10">
+              {steps.map((step, i) => (
+                <li key={step.title} className="relative">
+                  <Reveal delay={i * 120} className="flex gap-5">
+                    <span className="bg-gradient-accent relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-white shadow-lg sm:h-14 sm:w-14">
+                      <step.icon className="h-5 w-5 sm:h-6 sm:w-6" />
+                    </span>
+                    <div className="pt-1.5">
+                      <h3 className="text-base font-semibold text-foreground sm:text-lg">
+                        {step.title}
+                      </h3>
+                      <p className="mt-1.5 text-sm leading-relaxed text-muted sm:text-base">
+                        {step.description}
+                      </p>
+                    </div>
+                  </Reveal>
+                </li>
+              ))}
+            </ol>
+          </div>
         </section>
 
         {/* Confiance / RGPD */}
         <section className="border-t border-border bg-surface-muted">
           <div className="mx-auto w-full max-w-5xl px-5 py-16 sm:py-20">
             <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 sm:items-center">
-              <div>
+              <Reveal>
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-soft text-accent-strong">
                   <LockIcon className="h-5 w-5" />
                 </div>
@@ -258,9 +272,9 @@ export default function LandingPage() {
                   demandé clairement avant chaque envoi. Vous gardez à tout moment le
                   contrôle sur vos informations personnelles.
                 </p>
-              </div>
+              </Reveal>
 
-              <div className="flex flex-col gap-3">
+              <Reveal delay={120} className="flex flex-col gap-3">
                 <div className="flex items-start gap-3 rounded-xl border border-border bg-surface p-4">
                   <CameraIcon className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
                   <p className="text-sm text-foreground">
@@ -280,7 +294,7 @@ export default function LandingPage() {
                     Réservé aux personnes majeures, vérifié dès la première visite.
                   </p>
                 </div>
-              </div>
+              </Reveal>
             </div>
           </div>
         </section>
@@ -300,13 +314,7 @@ export default function LandingPage() {
               Créez votre profil en quelques minutes et recevez votre premier bilan
               personnalisé.
             </p>
-            <Link
-              href="/onboarding"
-              className="mt-7 inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3.5 text-sm font-semibold text-[#0a0a0f] transition-transform hover:scale-[1.02]"
-            >
-              Commencer gratuitement
-              <ArrowRightIcon className="h-4 w-4" />
-            </Link>
+            <FinalCta />
           </div>
         </section>
       </main>
