@@ -23,7 +23,7 @@ export function StepAccount({
       </h1>
       <p className="mt-2 text-sm leading-relaxed text-muted">
         {saveError
-          ? "Vous êtes bien connecté·e — c'est l'enregistrement de vos informations qui a échoué."
+          ? "Vous êtes bien connecté — c'est l'enregistrement de vos informations qui a échoué."
           : "Pour sauvegarder votre profil et débloquer la communauté, connectez-vous. Votre bilan sera lié à ce compte, quel que soit l'appareil utilisé."}
       </p>
 

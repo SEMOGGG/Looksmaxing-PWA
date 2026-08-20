@@ -308,7 +308,7 @@ export default function LandingPage() {
               className="pointer-events-none absolute -top-6 -right-6 h-24 w-24 opacity-20 mix-blend-overlay sm:h-56 sm:w-56"
             />
             <h2 className="font-heading relative text-2xl font-semibold text-white sm:text-3xl">
-              Prêt·e à prendre soin de vous, sans pression ?
+              Prêt à prendre soin de vous, sans pression ?
             </h2>
             <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-white/80 sm:text-base">
               Créez votre profil en quelques minutes et recevez votre premier bilan
