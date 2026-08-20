@@ -4,6 +4,7 @@
 // bibliothèque d'ingrédients plus classique de lib/skincare.ts.
 
 import type { Goal } from "@/lib/onboarding";
+import { skincareIngredients } from "@/lib/skincare";
 
 export type RoutineTip = { title: string; description: string };
 
@@ -52,43 +53,11 @@ export const naturalSkinTechniques: RoutineTip[] = [
 
 export type NicheActive = { name: string; description: string };
 
-export const nicheActives: NicheActive[] = [
-  {
-    name: "Bakuchiol",
-    description:
-      "L'alternative végétale au rétinol, extraite d'une plante : effet lissant comparable, sans la sensibilité au soleil. Idéal pour débuter en douceur ou pour les peaux réactives.",
-  },
-  {
-    name: "Acide azélaïque",
-    description:
-      "Anti-imperfections et anti-taches très bien toléré, y compris par les peaux sensibles. Peut se combiner avec le rétinol, contrairement aux AHA/BHA.",
-  },
-  {
-    name: "Centella Asiatica (Cica)",
-    description:
-      "Star du skincare coréen : répare la barrière cutanée et apaise les rougeurs. Parfait en soin de secours après un actif exfoliant trop agressif.",
-  },
-  {
-    name: "Vitamine C le matin",
-    description:
-      "Un antioxydant qui protège des UV et de la pollution en journée, en plus d'unifier le teint sur la durée : sans doute le geste le plus sous-estimé après le SPF.",
-  },
-  {
-    name: "Peptides de cuivre (GHK-Cu)",
-    description:
-      "Stimulent la production naturelle de collagène : utiles en soin ciblé anti-âge, en général sous forme d'ampoule ou de sérum concentré.",
-  },
-  {
-    name: "Panthénol (provitamine B5)",
-    description:
-      "Apaise quasi instantanément : à utiliser après un exfoliant, un léger coup de soleil ou tout simplement en hydratant du quotidien.",
-  },
-  {
-    name: "Huile de rose musquée",
-    description:
-      "Riche en acides gras et en vitamine A naturelle : aide à estomper les cicatrices d'acné et les taches sur plusieurs semaines d'utilisation régulière.",
-  },
-];
+// Puise directement dans la bibliothèque d'ingrédients skincare (onglet
+// "produits niche") pour éviter toute duplication de contenu.
+const nicheActives: NicheActive[] = skincareIngredients
+  .filter((ingredient) => ingredient.niche)
+  .map((ingredient) => ({ name: ingredient.name, description: ingredient.whatItDoes }));
 
 function dayIndex(length: number) {
   const start = Date.UTC(new Date().getUTCFullYear(), 0, 0);
