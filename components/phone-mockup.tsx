@@ -2,9 +2,9 @@ import Image from "next/image";
 
 // Cadre de téléphone stylisé pour présenter de vraies captures d'écran de
 // l'app sur la page d'accueil — nos captures ne sont pas au format 9:19.5
-// exact d'un téléphone, donc on force ce ratio ici et on laisse object-cover
-// recadrer sur le haut de l'écran (où se trouve l'essentiel : score, chat,
-// chiffres), plutôt que d'étirer l'image.
+// exact d'un téléphone, donc on force ce ratio ici. object-contain (plutôt
+// que cover) affiche l'image en entier, quitte à laisser un peu de fond
+// visible en bas de l'écran, pour ne jamais couper de texte sur les bords.
 export function PhoneMockup({
   src,
   alt,
@@ -22,7 +22,7 @@ export function PhoneMockup({
       style={tilt ? { transform: `rotate(${tilt}deg)` } : undefined}
     >
       <div className="relative h-full w-full overflow-hidden rounded-[1.6rem] bg-background">
-        <Image src={src} alt={alt} fill sizes="220px" className="object-cover object-top" />
+        <Image src={src} alt={alt} fill sizes="220px" className="object-contain object-top" />
       </div>
       <div className="absolute left-1/2 top-3 h-1.5 w-14 -translate-x-1/2 rounded-full bg-[#242230]" />
     </div>
