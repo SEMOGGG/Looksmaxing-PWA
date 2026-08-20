@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { auth } from "@clerk/nextjs/server";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { getUserData, saveUserProfile } from "@/app/actions/user-data";
@@ -11,6 +12,18 @@ import type { AnalysisCategory, AnalysisResult } from "@/lib/analysis";
 
 const BILAN_MODEL = "claude-sonnet-5";
 const RESUBMIT_COOLDOWN_SECONDS = 30;
+
+// Toutes les pages qui affichent des données dérivées de l'historique des
+// bilans (score, "axe de progression", photos, graphique). Sans ça, le
+// cache de navigation client de Next.js peut continuer à montrer une page
+// déjà visitée telle qu'elle était avant l'ajout/la suppression d'un bilan,
+// tant qu'on n'y navigue pas en rechargement complet.
+function revalidateBilanPages() {
+  revalidatePath("/suivi");
+  revalidatePath("/analyse");
+  revalidatePath("/compte");
+  revalidatePath("/routine");
+}
 
 const CATEGORY_LABELS: Record<string, string> = {
   visage: "Visage & symétrie",
@@ -235,6 +248,7 @@ export async function generateBilan(
     if (reuseError || !inserted) {
       return { ok: false, error: "Impossible d'enregistrer le bilan, réessayez." };
     }
+    revalidateBilanPages();
     return { ok: true, result: rowToStoredBilan(inserted) };
   }
 
@@ -377,6 +391,7 @@ export async function generateBilan(
     });
   }
 
+  revalidateBilanPages();
   return {
     ok: true,
     result: {
@@ -403,5 +418,6 @@ export async function deleteBilan(id: string): Promise<{ ok: true } | { ok: fals
   const { error } = await supabase.from("bilans").delete().eq("id", id).eq("user_id", userId);
 
   if (error) return { ok: false, error: "Impossible de supprimer ce bilan, réessayez." };
+  revalidateBilanPages();
   return { ok: true };
 }
