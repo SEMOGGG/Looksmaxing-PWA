@@ -149,6 +149,10 @@ alter table community_comments enable row level security;
 alter table community_likes enable row level security;
 alter table community_reports enable row level security;
 
+-- Marqué "traité" par un admin depuis /admin/community, sans forcément
+-- avoir supprimé le contenu signalé (ex. faux signalement).
+alter table community_reports add column if not exists resolved boolean not null default false;
+
 create policy "Lecture publique des posts approuvés"
   on community_posts for select
   using (moderation_status = 'approved');

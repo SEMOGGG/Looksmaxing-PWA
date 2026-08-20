@@ -67,3 +67,57 @@ export const coachMessageSchema = z.string().trim().min(1).max(2000);
 export const faceShapeSchema = z.enum(["ovale", "rond", "carre", "rectangle", "coeur", "triangle"]);
 
 export const planSchema = z.enum(["free", "premium"]);
+
+// --- Back-office admin (app/admin) ---------------------------------------
+
+export const adminArticleSchema = z.object({
+  category: articleCategorySchema,
+  title: z.string().trim().min(1).max(200),
+  excerpt: z.string().trim().min(1).max(400),
+  content: z.array(z.string().trim().min(1).max(3000)).min(1).max(20),
+  readMinutes: z.number().int().min(1).max(60),
+});
+
+// Slug lisible utilisé comme id (ex. "niacinamide") : cohérent avec les
+// ancres #id de la page /skincare.
+export const skincareSlugSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "Identifiant invalide (minuscules, chiffres et tirets uniquement)")
+  .min(2)
+  .max(60);
+
+export const adminIngredientSchema = z.object({
+  id: skincareSlugSchema,
+  name: z.string().trim().min(1).max(120),
+  whatItDoes: z.string().trim().min(1).max(600),
+  howToUse: z.string().trim().min(1).max(400),
+  caution: z.string().trim().min(1).max(400),
+  exampleProduct: z.string().trim().max(150),
+  niche: z.boolean(),
+  needs: z.array(z.string().trim().min(1)).max(10),
+});
+
+export const reputationTierSchema = z.object({
+  id: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "Identifiant invalide")
+    .min(2)
+    .max(30),
+  label: z.string().trim().min(1).max(40),
+  minPoints: z.number().int().min(0).max(1_000_000),
+});
+
+export const appSettingKeySchema = z.enum(["chad_slots", "chad_min_points", "media_unlock_threshold"]);
+export const appSettingValueSchema = z.number().int().min(0).max(1_000_000);
+
+export const pointAdjustmentSchema = z.object({
+  userId: z.string().trim().min(1).max(100),
+  points: z.number().int().min(-10_000).max(10_000).refine((n) => n !== 0, "Le nombre de points ne peut pas être 0."),
+  reason: z.string().trim().min(3).max(300),
+});
+
+export const moderationStatusSchema = z.enum(["approved", "pending", "flagged", "removed"]);
