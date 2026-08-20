@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "icons": "node scripts/generate-icons.mjs"
+    "icons": "node scripts/generate-icons.mjs",
+    "logo": "node scripts/export-logo.mjs"
   },
   "dependencies": {
     "@clerk/localizations": "^4.13.9",

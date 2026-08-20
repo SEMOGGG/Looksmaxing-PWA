@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="1024" height="1024" role="img" aria-label="Logo Faciem">
+  <defs>
+    <linearGradient id="faciem-logo-grad" x1="8" y1="6" x2="26" y2="34" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#A78BFA" />
+      <stop offset="100%" stop-color="#FF5DA2" />
+    </linearGradient>
+    <linearGradient id="faciem-logo-dot-grad" x1="30" y1="6" x2="37" y2="13" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFB4D8" />
+      <stop offset="100%" stop-color="#FF5DA2" />
+    </linearGradient>
+    <filter id="faciem-logo-blur" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="2.6" />
+    </filter>
+  </defs>
+  <circle cx="31" cy="11" r="7" fill="#FF5DA2" opacity="0.45" filter="url(#faciem-logo-blur)" />
+  <circle cx="9" cy="30" r="6.5" fill="#8B5CF6" opacity="0.4" filter="url(#faciem-logo-blur)" />
+  <g transform="skewX(-9)" fill="url(#faciem-logo-grad)">
+    <path d="M11 7 L29 7 L24 15 L16 15 L16 33 L11 33 Z" />
+    <path d="M11 18 L23 18 L19 24 L11 24 Z" />
+  </g>
+  <circle cx="33.5" cy="8.5" r="2.6" fill="url(#faciem-logo-dot-grad)" />
+  <circle cx="32.7" cy="7.7" r="0.9" fill="#ffffff" opacity="0.75" />
+</svg>
