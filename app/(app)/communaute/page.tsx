@@ -10,11 +10,12 @@ import { PostComposer } from "@/components/community/post-composer";
 import { ChadSpotlight, LeaderboardRow } from "@/components/community/reputation-badge";
 import { Reveal } from "@/components/reveal";
 import { LockIcon, ShieldCheckIcon, UsersIcon, MessageIcon, HeartIcon, TrophyIcon } from "@/components/icons";
-import { articles, categoryLabels, CHAD_SLOTS, type ArticleCategory, type Post } from "@/lib/community";
+import { categoryLabels, DEFAULT_CHAD_SLOTS, type Article, type ArticleCategory, type Post } from "@/lib/community";
 import type { Plan } from "@/lib/user-data";
 import { getUserData } from "@/app/actions/user-data";
 import {
   getPosts,
+  getArticles,
   createPost,
   createComment,
   toggleLike,
@@ -22,6 +23,7 @@ import {
   reportPost,
   getCommunityStanding,
   getLeaderboard,
+  getCommunitySettingsPublic,
   type CommunityStanding,
   type NewPostMedia,
 } from "./actions";
@@ -42,18 +44,29 @@ export default function CommunautePage() {
   const [category, setCategory] = useState<ArticleCategory | "tous">("tous");
   const [sort, setSort] = useState<"recent" | "popular">("recent");
   const [posts, setPosts] = useState<Post[]>([]);
+  const [articles, setArticles] = useState<Article[]>([]);
   const [plan, setPlan] = useState<Plan>("free");
   const [standing, setStanding] = useState<CommunityStanding>(DEFAULT_STANDING);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [chadSlots, setChadSlots] = useState(DEFAULT_CHAD_SLOTS);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    Promise.all([getUserData(), getPosts(), getCommunityStanding(), getLeaderboard()])
-      .then(([userData, loadedPosts, loadedStanding, loadedLeaderboard]) => {
+    Promise.all([
+      getUserData(),
+      getPosts(),
+      getArticles(),
+      getCommunityStanding(),
+      getLeaderboard(),
+      getCommunitySettingsPublic(),
+    ])
+      .then(([userData, loadedPosts, loadedArticles, loadedStanding, loadedLeaderboard, settings]) => {
         setPlan(userData.plan);
         setPosts(loadedPosts);
+        setArticles(loadedArticles);
         setStanding(loadedStanding);
         setLeaderboard(loadedLeaderboard);
+        setChadSlots(settings.chadSlots);
       })
       .finally(() => setReady(true));
   }, []);
@@ -345,7 +358,7 @@ export default function CommunautePage() {
           <div className="mt-4 flex flex-col gap-6">
             <p className="text-sm leading-relaxed text-muted">
               1 point par like reçu sur une publication, 1 point par vote « astuce utile » reçu sur
-              un commentaire. Les {CHAD_SLOTS} meilleurs scores décrochent le badge Chad — les places
+              un commentaire. Les {chadSlots} meilleurs scores décrochent le badge Chad — les places
               se reprennent si quelqu&rsquo;un d&rsquo;autre passe devant.
             </p>
 

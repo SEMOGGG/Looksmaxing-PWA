@@ -3,7 +3,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { getUserData } from "@/app/actions/user-data";
-import { skincareIngredients } from "@/lib/skincare";
+import { getSkincareIngredients } from "@/app/actions/skincare";
 import { photoDataUrlSchema } from "@/lib/validation";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getMonthlyAiCostUsd, MONTHLY_AI_BUDGET_USD } from "@/lib/ai-usage";
@@ -59,8 +59,7 @@ export async function getLatestSkinAnalysis(): Promise<SkinAnalysisResult | null
 
 type TextBlock = { type: "text"; text: string };
 
-function buildPrompt(): string {
-  const ingredientNames = skincareIngredients.map((i) => i.name).join(", ");
+function buildPrompt(ingredientNames: string): string {
   return `Analyse cette photo de visage et donne une évaluation générale de l'état de la peau (pas un diagnostic dermatologique) : brillance/zones sèches, texture, pores visibles, rougeurs apparentes, signes de déshydratation.
 
 Recommande uniquement parmi ces ingrédients déjà présents dans l'application (ne recommande rien d'autre) : ${ingredientNames}.
@@ -115,6 +114,9 @@ export async function analyzeSkin(
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return { ok: false, error: "Configuration serveur manquante." };
 
+  const ingredients = await getSkincareIngredients();
+  const ingredientNames = ingredients.map((i) => i.name).join(", ");
+
   let response: Response;
   try {
     response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -132,7 +134,7 @@ export async function analyzeSkin(
             role: "user",
             content: [
               { type: "image", source: { type: "base64", media_type: mediaType, data: base64Data } },
-              { type: "text", text: buildPrompt() },
+              { type: "text", text: buildPrompt(ingredientNames) },
             ],
           },
         ],

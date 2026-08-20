@@ -7,10 +7,11 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 import {
   moderateContent,
   seedPosts,
+  seedArticles,
   getContributionTier,
   getReputationTier,
   computeLeaderboardBadge,
-  MEDIA_UNLOCK_THRESHOLD,
+  type Article,
   type ArticleCategory,
   type ContributionTier,
   type LeaderboardBadge,
@@ -26,6 +27,7 @@ import {
 } from "@/lib/validation";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { moderateMediaImages } from "@/lib/moderation";
+import { getReputationTiersDb, getCommunitySettings, getPointAdjustmentTotals } from "@/lib/community-data.server";
 
 const postIdSchema = z.string().uuid();
 const commentIdSchema = z.string().uuid();
@@ -107,12 +109,15 @@ async function getContributionCount(
 async function computeLeaderboard(
   supabase: ReturnType<typeof getSupabaseServerClient>
 ): Promise<LeaderboardEntry[]> {
-  const [{ data: postRows }, { data: commentRows }] = await Promise.all([
+  const [{ data: postRows }, { data: commentRows }, adjustments, tiers, settings] = await Promise.all([
     supabase.from("community_posts").select("author_id, author_display_name, likes_count").neq("author_id", "seed"),
     supabase
       .from("community_comments")
       .select("author_id, author_display_name, helpful_count")
       .neq("author_id", "seed"),
+    getPointAdjustmentTotals(supabase),
+    getReputationTiersDb(supabase),
+    getCommunitySettings(supabase),
   ]);
 
   const points: Record<string, number> = {};
@@ -125,6 +130,10 @@ async function computeLeaderboard(
     points[row.author_id] = (points[row.author_id] ?? 0) + (row.helpful_count ?? 0);
     names[row.author_id] = row.author_display_name;
   }
+  for (const [userId, bonus] of Object.entries(adjustments)) {
+    points[userId] = (points[userId] ?? 0) + bonus;
+    names[userId] ??= "Membre";
+  }
 
   return Object.entries(points)
     .map(([authorId, pts]) => ({ authorId, displayName: names[authorId] ?? "Membre", points: pts }))
@@ -132,7 +141,7 @@ async function computeLeaderboard(
     .map((entry, index) => ({
       ...entry,
       rank: index + 1,
-      badge: computeLeaderboardBadge(entry.points, index + 1),
+      badge: computeLeaderboardBadge(entry.points, index + 1, tiers, settings.chadSlots, settings.chadMinPoints),
     }));
 }
 
@@ -142,11 +151,16 @@ function badgeMapFromLeaderboard(leaderboard: LeaderboardEntry[]): Record<string
   return map;
 }
 
-const ZERO_POINTS_BADGE: LeaderboardBadge = { kind: "tier", tier: getReputationTier(0) };
-
 export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
   const supabase = getSupabaseServerClient();
   return computeLeaderboard(supabase);
+}
+
+// Réglages publics (nombre de places Chad, etc.), pour l'affichage — les
+// vraies valeurs viennent de /admin/badges plutôt que d'être codées en dur.
+export async function getCommunitySettingsPublic() {
+  const supabase = getSupabaseServerClient();
+  return getCommunitySettings(supabase);
 }
 
 async function checkFloodCooldown(
@@ -181,6 +195,10 @@ export async function getPosts(): Promise<Post[]> {
 
   const leaderboard = await computeLeaderboard(supabase);
   const badges = badgeMapFromLeaderboard(leaderboard);
+  // Repli pour les auteurs absents du classement (ex. "seed", les
+  // publications éditoriales de démonstration, volontairement exclues du
+  // calcul des points).
+  const zeroPointsBadge: LeaderboardBadge = { kind: "tier", tier: getReputationTier(0) };
 
   return posts.map((post) => ({
     id: post.id,
@@ -191,7 +209,7 @@ export async function getPosts(): Promise<Post[]> {
     likes: post.likes_count,
     mediaUrl: post.media_url ?? null,
     mediaType: (post.media_type as "image" | "video" | null) ?? null,
-    authorBadge: badges[post.author_id] ?? ZERO_POINTS_BADGE,
+    authorBadge: badges[post.author_id] ?? zeroPointsBadge,
     comments: (comments ?? [])
       .filter((comment) => comment.post_id === post.id)
       .map((comment) => ({
@@ -200,7 +218,7 @@ export async function getPosts(): Promise<Post[]> {
         content: comment.content,
         createdAt: comment.created_at,
         helpfulCount: comment.helpful_count ?? 0,
-        authorBadge: badges[comment.author_id] ?? ZERO_POINTS_BADGE,
+        authorBadge: badges[comment.author_id] ?? zeroPointsBadge,
       })),
   }));
 }
@@ -213,23 +231,25 @@ export type CommunityStanding = {
 };
 
 export async function getCommunityStanding(): Promise<CommunityStanding> {
+  const supabase = getSupabaseServerClient();
+  const { mediaUnlockThreshold } = await getCommunitySettings(supabase);
+
   const { userId } = await auth();
   if (!userId) {
     return {
       contributionCount: 0,
       tier: getContributionTier(0),
       canUploadMedia: false,
-      remainingForMedia: MEDIA_UNLOCK_THRESHOLD,
+      remainingForMedia: mediaUnlockThreshold,
     };
   }
 
-  const supabase = getSupabaseServerClient();
   const contributionCount = await getContributionCount(supabase, userId);
   return {
     contributionCount,
     tier: getContributionTier(contributionCount),
-    canUploadMedia: contributionCount >= MEDIA_UNLOCK_THRESHOLD,
-    remainingForMedia: Math.max(0, MEDIA_UNLOCK_THRESHOLD - contributionCount),
+    canUploadMedia: contributionCount >= mediaUnlockThreshold,
+    remainingForMedia: Math.max(0, mediaUnlockThreshold - contributionCount),
   };
 }
 
@@ -333,11 +353,14 @@ export async function createPost(
       return { ok: false, error: "Trop de photos/vidéos envoyées récemment, patientez avant de réessayer." };
     }
 
-    const contributionCount = await getContributionCount(supabase, userId);
-    if (contributionCount < MEDIA_UNLOCK_THRESHOLD) {
+    const [contributionCount, { mediaUnlockThreshold }] = await Promise.all([
+      getContributionCount(supabase, userId),
+      getCommunitySettings(supabase),
+    ]);
+    if (contributionCount < mediaUnlockThreshold) {
       return {
         ok: false,
-        error: `L'envoi de photos et vidéos est réservé aux membres à partir de ${MEDIA_UNLOCK_THRESHOLD} contributions.`,
+        error: `L'envoi de photos et vidéos est réservé aux membres à partir de ${mediaUnlockThreshold} contributions.`,
       };
     }
 
@@ -488,4 +511,45 @@ export async function reportPost(
 
   if (error) return { ok: false, error: "Une erreur est survenue." };
   return { ok: true };
+}
+
+// Injecte les articles de démonstration une seule fois si la table est
+// vide (même principe que seedIfEmpty pour les publications) — modifiables
+// ensuite depuis /admin/articles, sans plus jamais toucher au code source.
+async function seedArticlesIfEmpty(supabase: ReturnType<typeof getSupabaseServerClient>) {
+  const { count } = await supabase
+    .from("community_articles")
+    .select("id", { count: "exact", head: true });
+
+  if (count && count > 0) return;
+
+  await supabase.from("community_articles").insert(
+    seedArticles.map((article, index) => ({
+      category: article.category,
+      title: article.title,
+      excerpt: article.excerpt,
+      content: article.content,
+      read_minutes: article.readMinutes,
+      sort_order: index,
+    }))
+  );
+}
+
+export async function getArticles(): Promise<Article[]> {
+  const supabase = getSupabaseServerClient();
+  await seedArticlesIfEmpty(supabase);
+
+  const { data } = await supabase
+    .from("community_articles")
+    .select("id, category, title, excerpt, content, read_minutes")
+    .order("sort_order", { ascending: true });
+
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    category: row.category,
+    title: row.title,
+    excerpt: row.excerpt,
+    content: row.content,
+    readMinutes: row.read_minutes,
+  }));
 }

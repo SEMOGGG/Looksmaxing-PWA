@@ -5,9 +5,15 @@ import Link from "next/link";
 import { CameraIcon, InfoIcon, LockIcon } from "@/components/icons";
 import { resizeImage } from "@/components/photo-slot";
 import { analyzeSkin, getLatestSkinAnalysis, type SkinAnalysisResult } from "@/app/actions/skin-analysis";
-import { skincareIngredients } from "@/lib/skincare";
+import type { SkincareIngredient } from "@/lib/skincare";
 
-export function SkinAnalysis({ isPremium }: { isPremium: boolean }) {
+export function SkinAnalysis({
+  isPremium,
+  ingredients,
+}: {
+  isPremium: boolean;
+  ingredients: SkincareIngredient[];
+}) {
   const [result, setResult] = useState<SkinAnalysisResult | null>(null);
   const [consent, setConsent] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
@@ -95,7 +101,7 @@ export function SkinAnalysis({ isPremium }: { isPremium: boolean }) {
               {result.recommendedIngredients.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-2">
                   {result.recommendedIngredients.map((name) => {
-                    const match = skincareIngredients.find((i) => i.name === name);
+                    const match = ingredients.find((i) => i.name === name);
                     return (
                       <a
                         key={name}

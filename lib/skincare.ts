@@ -96,7 +96,10 @@ export type SkincareIngredient = {
   needs: string[];
 };
 
-export const skincareIngredients: SkincareIngredient[] = [
+// Contenu injecté une seule fois si la table skincare_ingredients est vide
+// (voir seedIngredientsIfEmpty dans app/actions/skincare.ts) — modifiable
+// ensuite depuis /admin/routine, sans plus jamais toucher au code source.
+export const seedSkincareIngredients: SkincareIngredient[] = [
   {
     id: "niacinamide",
     name: "Niacinamide (vitamine B3)",
@@ -461,8 +464,11 @@ export const skincareIngredients: SkincareIngredient[] = [
 ];
 
 // Filtre par étiquette cliquable (id de skincareNeeds). null/absent = pas de
-// filtre, on retourne toute la bibliothèque.
-export function filterSkincareIngredients(needId: string | null): SkincareIngredient[] {
-  if (!needId) return skincareIngredients;
-  return skincareIngredients.filter((ingredient) => ingredient.needs.includes(needId));
+// filtre, on retourne toute la bibliothèque telle quelle.
+export function filterSkincareIngredients(
+  ingredients: SkincareIngredient[],
+  needId: string | null
+): SkincareIngredient[] {
+  if (!needId) return ingredients;
+  return ingredients.filter((ingredient) => ingredient.needs.includes(needId));
 }

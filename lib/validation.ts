@@ -41,7 +41,8 @@ export const commentContentSchema = z.string().trim().min(1).max(1000);
 const MAX_MEDIA_BYTES = 16 * 1024 * 1024; // 16 Mo décodés (photo ou vidéo)
 
 // Photo ou courte vidéo jointe à une publication Communauté (réservé aux
-// membres à 200 contributions ou plus, voir MEDIA_UNLOCK_THRESHOLD).
+// membres au-dessus d'un seuil de contributions réglable depuis
+// /admin/badges, voir app_settings "media_unlock_threshold").
 export const communityMediaSchema = z
   .string()
   .regex(

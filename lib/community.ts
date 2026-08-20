@@ -1,10 +1,12 @@
-// Espace communautaire : articles éditoriaux (contenu fixe, non modifiable
-// par les membres) + fil de discussion entre membres Premium.
+// Espace communautaire : articles éditoriaux (gérés depuis /admin/articles,
+// voir app/admin/actions/articles.ts) + fil de discussion entre membres
+// Premium.
 //
 // Ce fichier ne contient que ce qui est sûr à utiliser aussi bien côté
-// client que serveur (types, contenu éditorial, modération). L'accès aux
-// données de la communauté (Supabase) vit dans
-// app/(app)/communaute/actions.ts, qui est un module serveur uniquement.
+// client que serveur (types, contenu de démo/seed, modération, valeurs par
+// défaut). L'accès aux données réelles (Supabase — articles, ingrédients,
+// paliers de réputation, réglages) vit dans les Server Actions
+// correspondantes, jamais ici.
 
 export type ArticleCategory = "apparence" | "nutrition" | "cardio" | "style" | "general";
 
@@ -25,9 +27,11 @@ export type Article = {
   readMinutes: number;
 };
 
-export const articles: Article[] = [
+// Articles injectés une seule fois si la table community_articles est vide
+// (voir seedArticlesIfEmpty dans actions.ts), pour que l'onglet Articles ne
+// démarre pas vide — modifiables ensuite depuis /admin/articles.
+export const seedArticles: Omit<Article, "id">[] = [
   {
-    id: "routine-cheveux-bases",
     category: "apparence",
     title: "Les bases d'une routine capillaire qui fonctionne",
     excerpt: "Trois habitudes simples qui font une vraie différence sur la durée.",
@@ -39,7 +43,6 @@ export const articles: Article[] = [
     ],
   },
   {
-    id: "posture-exercices",
     category: "apparence",
     title: "Posture : 3 exercices simples pour se tenir plus droit",
     excerpt: "Pas besoin de salle de sport, 10 minutes par jour suffisent pour commencer.",
@@ -51,7 +54,6 @@ export const articles: Article[] = [
     ],
   },
   {
-    id: "comprendre-tdee",
     category: "nutrition",
     title: "Comprendre son TDEE sans se prendre la tête",
     excerpt: "Ce que veulent vraiment dire BMR, TDEE et déficit calorique.",
@@ -63,7 +65,6 @@ export const articles: Article[] = [
     ],
   },
   {
-    id: "hydratation-repere",
     category: "nutrition",
     title: "Hydratation : le repère le plus sous-estimé",
     excerpt: "Un facteur simple qui influence l'énergie, la peau et la récupération.",
@@ -75,7 +76,6 @@ export const articles: Article[] = [
     ],
   },
   {
-    id: "cardio-vs-muscu",
     category: "cardio",
     title: "Cardio ou musculation : que choisir pour votre objectif ?",
     excerpt: "Les deux ont leur rôle, la répartition dépend de ce que vous visez.",
@@ -87,7 +87,6 @@ export const articles: Article[] = [
     ],
   },
   {
-    id: "cardio-zone-2",
     category: "cardio",
     title: "La zone 2 : le cardio le plus simple à tenir dans la durée",
     excerpt: "Une intensité modérée, facile à répéter, sans s'épuiser à chaque séance.",
@@ -99,7 +98,6 @@ export const articles: Article[] = [
     ],
   },
   {
-    id: "vetements-morphologie",
     category: "style",
     title: "Bien choisir des vêtements à sa morphologie",
     excerpt: "Quelques repères simples pour des vêtements qui tombent mieux.",
@@ -111,7 +109,6 @@ export const articles: Article[] = [
     ],
   },
   {
-    id: "sommeil-levier",
     category: "general",
     title: "Sommeil : le levier le plus rentable pour votre apparence",
     excerpt: "Peau, récupération musculaire, énergie : tout en dépend un peu.",
@@ -149,23 +146,30 @@ export type Post = {
 // Paliers d'ancienneté/activité dans la Communauté, basés sur le nombre
 // total de publications + commentaires (tous auteurs confondus, calculé à
 // la volée — voir getContributionCount dans actions.ts). Sert uniquement à
-// débloquer l'envoi de photos/vidéos (MEDIA_UNLOCK_THRESHOLD) : le badge
-// affiché publiquement sur les publications est le système de réputation
-// par points ci-dessous (Débutant/LTN/MTN/HTN/Chad), pas celui-ci.
+// débloquer l'envoi de photos/vidéos (seuil réglable depuis /admin/badges,
+// voir app_settings "media_unlock_threshold") : le badge affiché
+// publiquement sur les publications est le système de réputation par
+// points ci-dessous (Débutant/LTN/MTN/HTN/Chad), pas celui-ci.
 export type ContributionTier = { id: string; label: string; minCount: number };
 
-export const contributionTiers: ContributionTier[] = [
+// Valeurs par défaut, utilisées tant que /admin n'a rien personnalisé (voir
+// seedIfEmpty côté reputation_tiers) ou si la table est temporairement
+// inaccessible — jamais codées en dur ailleurs dans l'app.
+export const DEFAULT_CONTRIBUTION_TIERS: ContributionTier[] = [
   { id: "nouveau", label: "Nouveau", minCount: 0 },
   { id: "actif", label: "Actif", minCount: 10 },
   { id: "habitue", label: "Habitué", minCount: 50 },
   { id: "verifie", label: "Vérifié", minCount: 200 },
 ];
 
-export const MEDIA_UNLOCK_THRESHOLD = 200;
+export const DEFAULT_MEDIA_UNLOCK_THRESHOLD = 200;
 
-export function getContributionTier(count: number): ContributionTier {
-  let current = contributionTiers[0];
-  for (const tier of contributionTiers) {
+export function getContributionTier(
+  count: number,
+  tiers: ContributionTier[] = DEFAULT_CONTRIBUTION_TIERS
+): ContributionTier {
+  let current = tiers[0] ?? DEFAULT_CONTRIBUTION_TIERS[0];
+  for (const tier of tiers) {
     if (count >= tier.minCount) current = tier;
   }
   return current;
@@ -173,28 +177,30 @@ export function getContributionTier(count: number): ContributionTier {
 
 // Système de réputation par points : chaque like reçu sur une publication
 // et chaque vote "utile" reçu sur un commentaire rapporte 1 point à son
-// auteur (voir computeLeaderboard dans actions.ts). Les paliers reprennent
-// le vocabulaire familier des communautés apparence/looksmaxing, avec Chad
-// réservé à un nombre limité de places (CHAD_SLOTS) plutôt qu'à un simple
-// seuil de points — c'est un classement, pas un niveau qu'on débloque seul.
+// auteur (voir computeLeaderboard dans actions.ts), plus d'éventuels
+// ajustements manuels par un admin. Les paliers (nom + seuil) sont gérés
+// depuis /admin/badges (table reputation_tiers) ; Chad reste à part —
+// réservé à un nombre limité de places (chadSlots) plutôt qu'à un simple
+// seuil de points, c'est un classement, pas un niveau qu'on débloque seul.
 export type ReputationTier = { id: string; label: string; minPoints: number };
 
-export const reputationTiers: ReputationTier[] = [
+export const DEFAULT_REPUTATION_TIERS: ReputationTier[] = [
   { id: "debutant", label: "Débutant", minPoints: 0 },
   { id: "ltn", label: "LTN", minPoints: 3 },
   { id: "mtn", label: "MTN", minPoints: 10 },
   { id: "htn", label: "HTN", minPoints: 25 },
 ];
 
-// Nombre de places de Chad disponibles, et score plancher pour y prétendre
-// (en plus d'être dans le top CHAD_SLOTS) : évite qu'un compte tout neuf
-// avec 1 point devienne Chad faute de concurrence.
-export const CHAD_SLOTS = 5;
-export const CHAD_MIN_POINTS = 25;
+// Repris si app_settings n'a pas encore été initialisée.
+export const DEFAULT_CHAD_SLOTS = 5;
+export const DEFAULT_CHAD_MIN_POINTS = 25;
 
-export function getReputationTier(points: number): ReputationTier {
-  let current = reputationTiers[0];
-  for (const tier of reputationTiers) {
+export function getReputationTier(
+  points: number,
+  tiers: ReputationTier[] = DEFAULT_REPUTATION_TIERS
+): ReputationTier {
+  let current = tiers[0] ?? DEFAULT_REPUTATION_TIERS[0];
+  for (const tier of tiers) {
     if (points >= tier.minPoints) current = tier;
   }
   return current;
@@ -204,11 +210,17 @@ export type LeaderboardBadge =
   | { kind: "chad"; rank: number }
   | { kind: "tier"; tier: ReputationTier };
 
-export function computeLeaderboardBadge(points: number, rank: number): LeaderboardBadge {
-  if (rank <= CHAD_SLOTS && points >= CHAD_MIN_POINTS) {
+export function computeLeaderboardBadge(
+  points: number,
+  rank: number,
+  tiers: ReputationTier[] = DEFAULT_REPUTATION_TIERS,
+  chadSlots: number = DEFAULT_CHAD_SLOTS,
+  chadMinPoints: number = DEFAULT_CHAD_MIN_POINTS
+): LeaderboardBadge {
+  if (rank <= chadSlots && points >= chadMinPoints) {
     return { kind: "chad", rank };
   }
-  return { kind: "tier", tier: getReputationTier(points) };
+  return { kind: "tier", tier: getReputationTier(points, tiers) };
 }
 
 export type LeaderboardEntry = {

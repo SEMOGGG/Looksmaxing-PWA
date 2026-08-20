@@ -7,8 +7,10 @@ import { NavIcon, ArrowRightIcon, SparklesIcon, LeafIcon } from "@/components/ic
 import { routineNav } from "@/lib/navigation";
 import { getUserData } from "@/app/actions/user-data";
 import { getBilanHistory } from "@/app/actions/bilan";
+import { getSkincareIngredients } from "@/app/actions/skincare";
 import { demoProfile, goalOptions, type Goal } from "@/lib/onboarding";
 import { dailyRoutineTip, routineHighlights } from "@/lib/routine-tips";
+import type { SkincareIngredient } from "@/lib/skincare";
 
 const defaultHighlights: Record<string, string> = {
   "/skincare": "Routine matin & soir",
@@ -19,21 +21,25 @@ const defaultHighlights: Record<string, string> = {
 export default function RoutinePage() {
   const [goals, setGoals] = useState<Goal[]>(demoProfile.goals);
   const [skinFocus, setSkinFocus] = useState<{ score: number; isFocus: boolean } | null>(null);
+  const [ingredients, setIngredients] = useState<SkincareIngredient[]>([]);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    Promise.all([getUserData(), getBilanHistory()]).then(([{ profile }, history]) => {
-      setGoals(profile?.goals ?? demoProfile.goals);
-      const latest = history[0];
-      const peau = latest?.categories.find((c) => c.key === "peau");
-      setSkinFocus(peau ? { score: peau.score, isFocus: peau.isFocus } : null);
-      setReady(true);
-    });
+    Promise.all([getUserData(), getBilanHistory(), getSkincareIngredients()]).then(
+      ([{ profile }, history, loadedIngredients]) => {
+        setGoals(profile?.goals ?? demoProfile.goals);
+        const latest = history[0];
+        const peau = latest?.categories.find((c) => c.key === "peau");
+        setSkinFocus(peau ? { score: peau.score, isFocus: peau.isFocus } : null);
+        setIngredients(loadedIngredients);
+        setReady(true);
+      }
+    );
   }, []);
 
   if (!ready) return null;
 
-  const tip = dailyRoutineTip();
+  const tip = dailyRoutineTip(ingredients);
   const highlights = { ...defaultHighlights, ...routineHighlights(goals) };
   const primaryGoalLabel = goalOptions.find((g) => g.value === goals[0])?.label;
 
@@ -113,16 +119,18 @@ export default function RoutinePage() {
             <h3 className="mt-1 text-base font-semibold text-foreground">{tip.technique.title}</h3>
             <p className="mt-1.5 text-sm leading-relaxed text-muted">{tip.technique.description}</p>
           </div>
-          <div className="rounded-2xl border border-border bg-surface p-5 transition-colors hover:border-accent/40">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-soft text-accent-strong">
-              <SparklesIcon className="h-4 w-4" />
-            </span>
-            <p className="mt-3 text-xs font-medium tracking-wide text-muted uppercase">
-              Actif de niche à connaître
-            </p>
-            <h3 className="mt-1 text-base font-semibold text-foreground">{tip.active.name}</h3>
-            <p className="mt-1.5 text-sm leading-relaxed text-muted">{tip.active.description}</p>
-          </div>
+          {tip.active && (
+            <div className="rounded-2xl border border-border bg-surface p-5 transition-colors hover:border-accent/40">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-soft text-accent-strong">
+                <SparklesIcon className="h-4 w-4" />
+              </span>
+              <p className="mt-3 text-xs font-medium tracking-wide text-muted uppercase">
+                Actif de niche à connaître
+              </p>
+              <h3 className="mt-1 text-base font-semibold text-foreground">{tip.active.name}</h3>
+              <p className="mt-1.5 text-sm leading-relaxed text-muted">{tip.active.description}</p>
+            </div>
+          )}
         </div>
         <p className="mt-3 text-xs text-muted">
           Une nouvelle astuce chaque jour. Retrouvez la bibliothèque complète d&rsquo;ingrédients

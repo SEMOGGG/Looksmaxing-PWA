@@ -319,3 +319,124 @@ alter table bilans enable row level security;
 insert into storage.buckets (id, name, public)
 values ('community-media', 'community-media', true)
 on conflict (id) do nothing;
+
+-- ============================================================================
+-- Back-office admin : bascule le contenu jusqu'ici codé en dur (articles,
+-- bibliothèque skincare, paliers de réputation, réglages communauté) vers
+-- des tables gérables depuis /admin, sans toucher au code source. L'accès
+-- admin est vérifié côté serveur par email (voir lib/admin.ts, ADMIN_EMAILS),
+-- pas par une colonne "is_admin" : plus simple à bootstrapper pour un seul
+-- opérateur, et toutes les Server Actions admin revérifient de toute façon.
+-- ============================================================================
+
+-- Articles éditoriaux de l'onglet Communauté (remplace le tableau `articles`
+-- de lib/community.ts).
+create table if not exists community_articles (
+  id uuid primary key default gen_random_uuid(),
+  category post_category not null default 'general',
+  title text not null,
+  excerpt text not null,
+  content text[] not null default '{}',
+  read_minutes integer not null default 3,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists community_articles_category_idx on community_articles (category, sort_order);
+
+alter table community_articles enable row level security;
+create policy "Lecture publique des articles"
+  on community_articles for select
+  using (true);
+-- Aucune policy insert/update/delete pour "anon" : uniquement via les
+-- Server Actions admin (clé secrète), après vérification du rôle admin.
+
+-- Bibliothèque d'ingrédients/produits skincare (remplace le tableau
+-- `skincareIngredients` de lib/skincare.ts). `id` reste un slug lisible
+-- (ex. "niacinamide") plutôt qu'un uuid, pour garder les ancres #id de la
+-- page /skincare stables.
+create table if not exists skincare_ingredients (
+  id text primary key,
+  name text not null,
+  what_it_does text not null,
+  how_to_use text not null,
+  caution text not null,
+  example_product text not null default '',
+  niche boolean not null default false,
+  needs text[] not null default '{}',
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists skincare_ingredients_sort_idx on skincare_ingredients (sort_order);
+
+alter table skincare_ingredients enable row level security;
+create policy "Lecture publique de la bibliothèque skincare"
+  on skincare_ingredients for select
+  using (true);
+
+-- Paliers de réputation Communauté (remplace `reputationTiers` de
+-- lib/community.ts) : Débutant/LTN/MTN/HTN par défaut, modifiables/
+-- renommables/ajoutables depuis /admin/badges. Le palier Chad n'est PAS une
+-- ligne ici : c'est un statut de classement (top N, voir app_settings
+-- "chad_slots"/"chad_min_points"), pas un seuil de points fixe.
+create table if not exists reputation_tiers (
+  id text primary key,
+  label text not null,
+  min_points integer not null,
+  sort_order integer not null default 0
+);
+
+alter table reputation_tiers enable row level security;
+create policy "Lecture publique des paliers de réputation"
+  on reputation_tiers for select
+  using (true);
+
+insert into reputation_tiers (id, label, min_points, sort_order) values
+  ('debutant', 'Débutant', 0, 0),
+  ('ltn', 'LTN', 3, 1),
+  ('mtn', 'MTN', 10, 2),
+  ('htn', 'HTN', 25, 3)
+on conflict (id) do nothing;
+
+-- Réglages globaux ajustables sans redéploiement (nombre de places Chad,
+-- seuil de points pour y prétendre, seuil de contributions débloquant
+-- photos/vidéos communauté). Clé/valeur plutôt que des colonnes dédiées :
+-- permet d'ajouter d'autres réglages plus tard sans migration.
+create table if not exists app_settings (
+  key text primary key,
+  value jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+alter table app_settings enable row level security;
+create policy "Lecture publique des réglages"
+  on app_settings for select
+  using (true);
+
+insert into app_settings (key, value) values
+  ('chad_slots', '5'),
+  ('chad_min_points', '25'),
+  ('media_unlock_threshold', '200')
+on conflict (key) do nothing;
+
+-- Ajustements manuels de points de réputation par un admin (bonus/malus,
+-- ex. "a beaucoup aidé sur le forum externe" ou correction d'un abus de
+-- vote) : s'ajoutent aux points gagnés par likes/votes plutôt que de les
+-- remplacer, avec la raison conservée pour traçabilité.
+create table if not exists community_point_adjustments (
+  id uuid primary key default gen_random_uuid(),
+  user_id text not null,
+  points integer not null,
+  reason text not null,
+  created_by text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists community_point_adjustments_user_idx on community_point_adjustments (user_id);
+
+alter table community_point_adjustments enable row level security;
+-- Aucune policy pour "anon" : lu/écrit uniquement par les Server Actions
+-- admin, après vérification du rôle admin.

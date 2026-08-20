@@ -5,6 +5,7 @@ import { AppTopBar } from "@/components/app-top-bar";
 import { HealthDisclaimer } from "@/components/health-disclaimer";
 import { SkinAnalysis } from "@/components/skin-analysis";
 import { getUserData } from "@/app/actions/user-data";
+import { getSkincareIngredients } from "@/app/actions/skincare";
 import {
   morningRoutine,
   eveningRoutine,
@@ -12,6 +13,7 @@ import {
   filterSkincareIngredients,
   skincareNeeds,
   type RoutineStep,
+  type SkincareIngredient,
 } from "@/lib/skincare";
 
 function RoutineList({ title, steps }: { title: string; steps: RoutineStep[] }) {
@@ -40,19 +42,21 @@ function RoutineList({ title, steps }: { title: string; steps: RoutineStep[] }) 
 
 export default function SkincarePage() {
   const [isPremium, setIsPremium] = useState(false);
+  const [ingredients, setIngredients] = useState<SkincareIngredient[]>([]);
   const [ready, setReady] = useState(false);
   const [activeNeed, setActiveNeed] = useState<string | null>(null);
 
   useEffect(() => {
-    getUserData().then(({ plan }) => {
+    Promise.all([getUserData(), getSkincareIngredients()]).then(([{ plan }, loadedIngredients]) => {
       setIsPremium(plan === "premium");
+      setIngredients(loadedIngredients);
       setReady(true);
     });
   }, []);
 
   if (!ready) return null;
 
-  const results = filterSkincareIngredients(activeNeed);
+  const results = filterSkincareIngredients(ingredients, activeNeed);
   const activeLabel = skincareNeeds.find((n) => n.id === activeNeed)?.label;
 
   return (
@@ -73,7 +77,7 @@ export default function SkincarePage() {
           irritation), arrêtez et demandez conseil à un dermatologue.
         </p>
 
-        <SkinAnalysis isPremium={isPremium} />
+        <SkinAnalysis isPremium={isPremium} ingredients={ingredients} />
 
         <h2 className="mt-8 text-base font-semibold text-foreground">
           Bibliothèque d&rsquo;ingrédients

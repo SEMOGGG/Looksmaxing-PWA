@@ -4,7 +4,7 @@
 // bibliothèque d'ingrédients plus classique de lib/skincare.ts.
 
 import type { Goal } from "@/lib/onboarding";
-import { skincareIngredients } from "@/lib/skincare";
+import type { SkincareIngredient } from "@/lib/skincare";
 
 export type RoutineTip = { title: string; description: string };
 
@@ -53,12 +53,6 @@ export const naturalSkinTechniques: RoutineTip[] = [
 
 export type NicheActive = { name: string; description: string };
 
-// Puise directement dans la bibliothèque d'ingrédients skincare (onglet
-// "produits niche") pour éviter toute duplication de contenu.
-const nicheActives: NicheActive[] = skincareIngredients
-  .filter((ingredient) => ingredient.niche)
-  .map((ingredient) => ({ name: ingredient.name, description: ingredient.whatItDoes }));
-
 function dayIndex(length: number) {
   const start = Date.UTC(new Date().getUTCFullYear(), 0, 0);
   const oneDay = 86_400_000;
@@ -66,10 +60,18 @@ function dayIndex(length: number) {
   return Math.floor(diff / oneDay) % length;
 }
 
-export function dailyRoutineTip() {
+// Puise directement dans la bibliothèque d'ingrédients skincare (gérée
+// depuis /admin/routine) pour éviter toute duplication de contenu — le
+// hub Routine passe les ingrédients déjà chargés plutôt que d'en refaire
+// une lecture séparée.
+export function dailyRoutineTip(ingredients: SkincareIngredient[]) {
+  const nicheActives: NicheActive[] = ingredients
+    .filter((ingredient) => ingredient.niche)
+    .map((ingredient) => ({ name: ingredient.name, description: ingredient.whatItDoes }));
+
   return {
     technique: naturalSkinTechniques[dayIndex(naturalSkinTechniques.length)],
-    active: nicheActives[dayIndex(nicheActives.length)],
+    active: nicheActives.length > 0 ? nicheActives[dayIndex(nicheActives.length)] : null,
   };
 }
 
