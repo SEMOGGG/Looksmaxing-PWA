@@ -140,3 +140,7 @@ export const recipeSchema = z.object({
   steps: z.array(z.string().trim().min(1).max(500)).min(1).max(20),
   tip: z.string().trim().max(400).nullable(),
 });
+
+// URL de photo ajoutée uniquement depuis /admin/recipes (jamais par une
+// proposition de membre, voir Recipe["imageUrl"] dans lib/recipes.ts).
+export const recipeImageUrlSchema = z.string().trim().url().max(500).nullable();

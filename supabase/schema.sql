@@ -463,6 +463,7 @@ create table if not exists recipes (
   ingredients text[] not null default '{}',
   steps text[] not null default '{}',
   tip text,
+  image_url text,
   status text not null default 'pending',
   submitted_by text,
   submitted_by_name text,

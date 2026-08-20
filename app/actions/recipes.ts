@@ -19,6 +19,7 @@ type RecipeRow = {
   ingredients: string[];
   steps: string[];
   tip: string | null;
+  image_url: string | null;
 };
 
 function rowToRecipe(row: RecipeRow): Recipe {
@@ -35,6 +36,7 @@ function rowToRecipe(row: RecipeRow): Recipe {
     ingredients: row.ingredients,
     steps: row.steps,
     tip: row.tip,
+    imageUrl: row.image_url,
   };
 }
 
@@ -72,7 +74,9 @@ export async function getRecipes(): Promise<Recipe[]> {
 
   const { data } = await supabase
     .from("recipes")
-    .select("id, title, description, tags, prep_minutes, servings, calories, protein_g, carbs_g, ingredients, steps, tip")
+    .select(
+      "id, title, description, tags, prep_minutes, servings, calories, protein_g, carbs_g, ingredients, steps, tip, image_url"
+    )
     .eq("status", "approved")
     .order("sort_order", { ascending: true })
     .returns<RecipeRow[]>();

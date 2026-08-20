@@ -1,17 +1,30 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   listRecipesAdmin,
   createRecipe,
   updateRecipe,
   deleteRecipe,
   setRecipeStatus,
+  uploadRecipeImage,
   type AdminRecipe,
   type AdminRecipeInput,
 } from "../actions/recipes";
-import { recipeTags } from "@/lib/recipes";
+import { recipeTags, getRecipeVisual } from "@/lib/recipes";
 import { formatRelativeTime } from "@/lib/format-time";
+import { resizeImage } from "@/components/photo-slot";
+
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => (typeof reader.result === "string" ? resolve(reader.result) : reject());
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 const emptyForm: AdminRecipeInput = {
   title: "",
@@ -25,6 +38,7 @@ const emptyForm: AdminRecipeInput = {
   ingredients: [""],
   steps: [""],
   tip: "",
+  imageUrl: null,
 };
 
 const statusLabels: Record<string, string> = {
@@ -56,6 +70,9 @@ export default function AdminRecipesPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   function load() {
     listRecipesAdmin().then(setRecipes);
@@ -83,6 +100,7 @@ export default function AdminRecipesPage() {
       ingredients: recipe.ingredients,
       steps: recipe.steps,
       tip: recipe.tip ?? "",
+      imageUrl: recipe.imageUrl,
     });
     setError(null);
   }
@@ -107,6 +125,34 @@ export default function AdminRecipesPage() {
     }));
   }
 
+  async function handleImageFile(file: File | undefined) {
+    if (!file) return;
+    setImageError(null);
+
+    if (file.size > MAX_IMAGE_BYTES) {
+      setImageError("Image trop volumineuse (8 Mo maximum).");
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      setImageError("Formats acceptés : JPEG, PNG, WebP.");
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      const resized = await resizeImage(dataUrl, 1600, 0.85);
+      const result = await uploadRecipeImage(resized);
+      if (!result.ok) {
+        setImageError(result.error);
+        return;
+      }
+      setForm((f) => ({ ...f, imageUrl: result.url }));
+    } finally {
+      setUploadingImage(false);
+    }
+  }
+
   async function handleSave() {
     setSaving(true);
     setError(null);
@@ -115,6 +161,7 @@ export default function AdminRecipesPage() {
       ingredients: form.ingredients.map((i) => i.trim()).filter(Boolean),
       steps: form.steps.map((s) => s.trim()).filter(Boolean),
       tip: form.tip?.trim() ? form.tip.trim() : null,
+      imageUrl: form.imageUrl?.trim() ? form.imageUrl.trim() : null,
     };
     const result = editingId ? await updateRecipe(editingId, input) : await createRecipe(input);
     setSaving(false);
@@ -338,6 +385,43 @@ export default function AdminRecipesPage() {
             />
           </label>
 
+          <div className="mt-3">
+            <p className="text-xs text-muted">Photo (facultatif — sans photo, un habillage par défaut est utilisé)</p>
+            {form.imageUrl && (
+              <div className="relative mt-1.5">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={form.imageUrl}
+                  alt=""
+                  className="h-32 w-full rounded-lg border border-border object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, imageUrl: null }))}
+                  className="absolute top-2 right-2 rounded-full bg-black/60 px-2 py-1 text-[10px] font-medium text-white hover:bg-black/80"
+                >
+                  Retirer
+                </button>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => imageInputRef.current?.click()}
+              disabled={uploadingImage}
+              className="mt-1.5 rounded-full border border-border px-3.5 py-1.5 text-xs font-medium text-muted transition-colors hover:border-accent/50 hover:text-foreground disabled:cursor-wait disabled:opacity-60"
+            >
+              {uploadingImage ? "Envoi…" : form.imageUrl ? "Changer la photo" : "Ajouter une photo"}
+            </button>
+            {imageError && <p className="mt-1.5 text-xs text-danger">{imageError}</p>}
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => handleImageFile(e.target.files?.[0])}
+            />
+          </div>
+
           {error && <p className="mt-3 text-xs text-danger">{error}</p>}
 
           <div className="mt-4 flex gap-2">
@@ -377,20 +461,39 @@ export default function AdminRecipesPage() {
 
       <div className="mt-4 flex flex-col gap-2">
         {visibleRecipes.length === 0 && <p className="text-sm text-muted">Aucune recette dans cette liste.</p>}
-        {visibleRecipes.map((recipe) => (
+        {visibleRecipes.map((recipe) => {
+          const visual = getRecipeVisual(recipe.tags);
+          return (
           <div key={recipe.id} className="rounded-2xl border border-border bg-surface p-4">
             <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <p className="text-sm font-semibold text-foreground">{recipe.title}</p>
-                  <StatusBadge status={recipe.status} />
+              <div className="flex min-w-0 gap-3">
+                {recipe.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={recipe.imageUrl}
+                    alt=""
+                    className="h-14 w-14 shrink-0 rounded-lg border border-border object-cover"
+                  />
+                ) : (
+                  <div
+                    className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg text-2xl"
+                    style={{ background: visual.gradient }}
+                  >
+                    <span aria-hidden>{visual.emoji}</span>
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <p className="text-sm font-semibold text-foreground">{recipe.title}</p>
+                    <StatusBadge status={recipe.status} />
+                  </div>
+                  <p className="mt-0.5 text-xs text-muted">{recipe.description}</p>
+                  <p className="mt-1 text-xs text-muted">
+                    {recipe.calories} kcal · {recipe.proteinG} g prot. · {recipe.carbsG} g gluc. ·{" "}
+                    {formatRelativeTime(recipe.createdAt)}
+                    {recipe.submittedByName ? ` · proposée par ${recipe.submittedByName}` : " · éditoriale"}
+                  </p>
                 </div>
-                <p className="mt-0.5 text-xs text-muted">{recipe.description}</p>
-                <p className="mt-1 text-xs text-muted">
-                  {recipe.calories} kcal · {recipe.proteinG} g prot. · {recipe.carbsG} g gluc. ·{" "}
-                  {formatRelativeTime(recipe.createdAt)}
-                  {recipe.submittedByName ? ` · proposée par ${recipe.submittedByName}` : " · éditoriale"}
-                </p>
               </div>
               <div className="flex shrink-0 flex-wrap justify-end gap-2">
                 {recipe.status === "pending" && (
@@ -461,7 +564,8 @@ export default function AdminRecipesPage() {
               </div>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

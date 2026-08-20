@@ -1,14 +1,46 @@
 "use server";
 
 import { z } from "zod";
+import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
-import { recipeSchema, recipeStatusSchema } from "@/lib/validation";
+import { recipeSchema, recipeStatusSchema, recipeImageUrlSchema, photoDataUrlSchema } from "@/lib/validation";
 import { seedIfEmpty } from "@/app/actions/recipes";
 
 const idSchema = z.string().uuid();
 type ActionResult = { ok: true } | { ok: false; error: string };
+
+// Photo de recette envoyée depuis /admin/recipes : contenu admin, donc pas
+// de modération IA (contrairement aux médias Communauté envoyés par les
+// membres) — juste un contrôle de format/taille avant l'upload.
+export async function uploadRecipeImage(
+  dataUrl: string
+): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  const guard = await requireAdmin();
+  if (!guard.ok) return guard;
+
+  const parsed = photoDataUrlSchema.safeParse(dataUrl);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Image invalide." };
+
+  const match = parsed.data.match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) return { ok: false, error: "Image invalide." };
+  const [, mimeType, base64Data] = match;
+  const extension = (mimeType.split("/")[1] ?? "jpg").replace(/[^a-z0-9]/gi, "").toLowerCase() || "jpg";
+
+  const supabase = getSupabaseServerClient();
+  const buffer = Buffer.from(base64Data, "base64");
+  const path = `recipes/${randomUUID()}.${extension}`;
+
+  const { error } = await supabase.storage
+    .from("community-media")
+    .upload(path, buffer, { contentType: mimeType, upsert: false });
+
+  if (error) return { ok: false, error: "Échec de l'envoi de l'image, réessayez." };
+
+  const { data: publicUrlData } = supabase.storage.from("community-media").getPublicUrl(path);
+  return { ok: true, url: publicUrlData.publicUrl };
+}
 
 export type AdminRecipe = {
   id: string;
@@ -23,6 +55,7 @@ export type AdminRecipe = {
   ingredients: string[];
   steps: string[];
   tip: string | null;
+  imageUrl: string | null;
   status: string;
   submittedByName: string | null;
   createdAt: string;
@@ -40,6 +73,7 @@ export type AdminRecipeInput = {
   ingredients: string[];
   steps: string[];
   tip: string | null;
+  imageUrl: string | null;
 };
 
 export async function listRecipesAdmin(): Promise<AdminRecipe[]> {
@@ -52,7 +86,7 @@ export async function listRecipesAdmin(): Promise<AdminRecipe[]> {
   const { data } = await supabase
     .from("recipes")
     .select(
-      "id, title, description, tags, prep_minutes, servings, calories, protein_g, carbs_g, ingredients, steps, tip, status, submitted_by_name, created_at"
+      "id, title, description, tags, prep_minutes, servings, calories, protein_g, carbs_g, ingredients, steps, tip, image_url, status, submitted_by_name, created_at"
     )
     .order("created_at", { ascending: false });
 
@@ -69,6 +103,7 @@ export async function listRecipesAdmin(): Promise<AdminRecipe[]> {
     ingredients: row.ingredients,
     steps: row.steps,
     tip: row.tip,
+    imageUrl: row.image_url,
     status: row.status,
     submittedByName: row.submitted_by_name,
     createdAt: row.created_at,
@@ -80,7 +115,9 @@ export async function createRecipe(input: AdminRecipeInput): Promise<ActionResul
   if (!guard.ok) return guard;
 
   const parsed = recipeSchema.safeParse(input);
+  const parsedImage = recipeImageUrlSchema.safeParse(input.imageUrl);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Recette invalide." };
+  if (!parsedImage.success) return { ok: false, error: "URL d'image invalide." };
 
   const supabase = getSupabaseServerClient();
   const { count } = await supabase.from("recipes").select("id", { count: "exact", head: true });
@@ -97,6 +134,7 @@ export async function createRecipe(input: AdminRecipeInput): Promise<ActionResul
     ingredients: parsed.data.ingredients,
     steps: parsed.data.steps,
     tip: parsed.data.tip,
+    image_url: parsedImage.data,
     status: "approved",
     sort_order: count ?? 0,
   });
@@ -115,7 +153,9 @@ export async function updateRecipe(id: string, input: AdminRecipeInput): Promise
   if (!parsedId.success) return { ok: false, error: "Recette invalide." };
 
   const parsed = recipeSchema.safeParse(input);
+  const parsedImage = recipeImageUrlSchema.safeParse(input.imageUrl);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Recette invalide." };
+  if (!parsedImage.success) return { ok: false, error: "URL d'image invalide." };
 
   const supabase = getSupabaseServerClient();
   const { error } = await supabase
@@ -132,6 +172,7 @@ export async function updateRecipe(id: string, input: AdminRecipeInput): Promise
       ingredients: parsed.data.ingredients,
       steps: parsed.data.steps,
       tip: parsed.data.tip,
+      image_url: parsedImage.data,
       updated_at: new Date().toISOString(),
     })
     .eq("id", parsedId.data);

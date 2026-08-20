@@ -36,7 +36,34 @@ export type Recipe = {
   ingredients: string[];
   steps: string[];
   tip: string | null;
+  // Photo ajoutée depuis /admin/recipes (jamais fournie par une proposition
+  // de membre : une URL d'image externe non modérée ne doit jamais
+  // s'afficher publiquement sans validation d'un admin). Tant qu'aucune
+  // photo n'est définie, getRecipeVisual fournit un habillage par défaut.
+  imageUrl: string | null;
 };
+
+// Habillage visuel par défaut (dégradé + emoji) tant qu'aucune photo n'a été
+// ajoutée depuis /admin/recipes — dérivé des étiquettes plutôt que stocké,
+// pour ne pas ajouter de colonne rien que pour ça. L'ordre reflète une
+// priorité d'affichage (une recette "whey" prime sur "riche en protéines").
+const VISUAL_BY_TAG: Record<string, { emoji: string; gradient: string }> = {
+  "creme-de-riz": { emoji: "🍚", gradient: "linear-gradient(135deg, #f4d9a0 0%, #ffb86b 100%)" },
+  whey: { emoji: "🥤", gradient: "linear-gradient(135deg, #8b5cf6 0%, #ff5da2 100%)" },
+  proteine: { emoji: "🍗", gradient: "linear-gradient(135deg, #ff8a65 0%, #ff5da2 100%)" },
+  potassium: { emoji: "🍌", gradient: "linear-gradient(135deg, #4ade80 0%, #22d3ee 100%)" },
+  glucides: { emoji: "🍞", gradient: "linear-gradient(135deg, #ffd166 0%, #ff8a65 100%)" },
+  collation: { emoji: "🍫", gradient: "linear-gradient(135deg, #a78bfa 0%, #ff8a65 100%)" },
+  "petit-dejeuner": { emoji: "🌅", gradient: "linear-gradient(135deg, #ffd166 0%, #a78bfa 100%)" },
+  rapide: { emoji: "⚡", gradient: "linear-gradient(135deg, #22d3ee 0%, #8b5cf6 100%)" },
+};
+
+export function getRecipeVisual(tags: string[]): { emoji: string; gradient: string } {
+  for (const tagId of Object.keys(VISUAL_BY_TAG)) {
+    if (tags.includes(tagId)) return VISUAL_BY_TAG[tagId];
+  }
+  return { emoji: "🍽️", gradient: "linear-gradient(135deg, #8b5cf6 0%, #ff5da2 100%)" };
+}
 
 // Recettes injectées une seule fois si la table recipes est vide (voir
 // seedIfEmpty dans app/actions/recipes.ts), pour que le livre de recettes
@@ -44,7 +71,7 @@ export type Recipe = {
 // de classiques "riches en protéines/glucides/potassium" et de recettes à la
 // whey / crème de riz, dans l'esprit de ce qu'on trouve couramment partagé
 // et testé dans la communauté fitness.
-export const seedRecipes: Omit<Recipe, "id">[] = [
+export const seedRecipes: Omit<Recipe, "id" | "imageUrl">[] = [
   {
     title: "Bowl de poulet, riz et brocolis",
     description: "Le grand classique post-training : simple, rapide à préparer en quantité, et qui tient toute la soirée.",

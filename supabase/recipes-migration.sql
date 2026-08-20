@@ -16,6 +16,7 @@ create table if not exists recipes (
   ingredients text[] not null default '{}',
   steps text[] not null default '{}',
   tip text,
+  image_url text,
   status text not null default 'pending',
   submitted_by text,
   submitted_by_name text,
@@ -23,6 +24,8 @@ create table if not exists recipes (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table recipes add column if not exists image_url text;
 
 create index if not exists recipes_status_idx on recipes (status, sort_order);
 create index if not exists recipes_submitted_by_idx on recipes (submitted_by);
