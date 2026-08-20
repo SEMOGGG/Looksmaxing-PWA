@@ -4,13 +4,13 @@ import { useEffect, useState } from "react";
 import { AppTopBar } from "@/components/app-top-bar";
 import { HealthDisclaimer } from "@/components/health-disclaimer";
 import { SkinAnalysis } from "@/components/skin-analysis";
-import { SearchIcon } from "@/components/icons";
 import { getUserData } from "@/app/actions/user-data";
 import {
   morningRoutine,
   eveningRoutine,
   guaShaRoutine,
-  searchSkincareIngredients,
+  filterSkincareIngredients,
+  skincareNeeds,
   type RoutineStep,
 } from "@/lib/skincare";
 
@@ -41,7 +41,7 @@ function RoutineList({ title, steps }: { title: string; steps: RoutineStep[] }) 
 export default function SkincarePage() {
   const [isPremium, setIsPremium] = useState(false);
   const [ready, setReady] = useState(false);
-  const [query, setQuery] = useState("");
+  const [activeNeed, setActiveNeed] = useState<string | null>(null);
 
   useEffect(() => {
     getUserData().then(({ plan }) => {
@@ -52,7 +52,8 @@ export default function SkincarePage() {
 
   if (!ready) return null;
 
-  const results = searchSkincareIngredients(query);
+  const results = filterSkincareIngredients(activeNeed);
+  const activeLabel = skincareNeeds.find((n) => n.id === activeNeed)?.label;
 
   return (
     <>
@@ -82,22 +83,41 @@ export default function SkincarePage() {
           avec quelles précautions.
         </p>
 
-        <div className="relative mt-4">
-          <SearchIcon className="pointer-events-none absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 text-muted" />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Vous cherchez un produit pour... (boutons, taches, hydratation, rides...)"
-            className="w-full rounded-full border border-border bg-surface py-3 pr-4 pl-11 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
-          />
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveNeed(null)}
+            aria-pressed={activeNeed === null}
+            className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
+              activeNeed === null
+                ? "border-accent bg-accent-soft text-accent-strong"
+                : "border-border bg-surface text-muted hover:border-accent/40"
+            }`}
+          >
+            Tous
+          </button>
+          {skincareNeeds.map((need) => (
+            <button
+              key={need.id}
+              type="button"
+              onClick={() => setActiveNeed((current) => (current === need.id ? null : need.id))}
+              aria-pressed={activeNeed === need.id}
+              className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
+                activeNeed === need.id
+                  ? "border-accent bg-accent-soft text-accent-strong"
+                  : "border-border bg-surface text-muted hover:border-accent/40"
+              }`}
+            >
+              {need.label}
+            </button>
+          ))}
         </div>
 
         <p className="mt-3 text-xs text-muted">
           {results.length === 0
-            ? "Aucun résultat pour cette recherche."
-            : query.trim()
-              ? `${results.length} résultat${results.length > 1 ? "s" : ""} pour « ${query.trim()} »`
+            ? "Aucun ingrédient dans cette catégorie."
+            : activeLabel
+              ? `${results.length} ingrédient${results.length > 1 ? "s" : ""} pour « ${activeLabel} »`
               : `${results.length} ingrédients au total, classiques et de niche.`}
         </p>
 

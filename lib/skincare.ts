@@ -61,6 +61,27 @@ export const guaShaRoutine: RoutineStep[] = [
   },
 ];
 
+// Catégories de besoin fixes, affichées comme des étiquettes cliquables
+// au-dessus de la bibliothèque (plus fiable qu'une recherche texte libre :
+// pas d'ambiguïté entre "peau grasse" et "peau sèche").
+export type SkincareNeed = { id: string; label: string };
+
+export const skincareNeeds: SkincareNeed[] = [
+  { id: "peau-grasse", label: "Peau grasse" },
+  { id: "peau-seche", label: "Peau sèche" },
+  { id: "boutons", label: "Boutons / acné" },
+  { id: "points-noirs", label: "Points noirs / pores" },
+  { id: "taches", label: "Taches / teint irrégulier" },
+  { id: "rides", label: "Rides / anti-âge" },
+  { id: "hydratation", label: "Hydratation" },
+  { id: "rougeurs", label: "Rougeurs / sensibilité" },
+  { id: "cernes", label: "Cernes / contour des yeux" },
+  { id: "fermete", label: "Fermeté / collagène" },
+  { id: "cicatrices", label: "Cicatrices" },
+  { id: "protection", label: "Protection solaire" },
+  { id: "purifiant", label: "Purifiant / masque" },
+];
+
 export type SkincareIngredient = {
   id: string;
   name: string;
@@ -71,8 +92,7 @@ export type SkincareIngredient = {
   // true = actif plus confidentiel, rarement mis en avant en grande surface ;
   // false = grand classique qu'on retrouve dans la plupart des routines.
   niche: boolean;
-  // Mots-clés de recherche (besoins exprimés par l'utilisateur) pour la
-  // barre "Vous cherchez un produit pour...".
+  // Identifiants de skincareNeeds auxquels répond cet ingrédient.
   needs: string[];
 };
 
@@ -86,7 +106,7 @@ export const skincareIngredients: SkincareIngredient[] = [
     caution: "Bien tolérée en général ; à de très fortes concentrations, peut légèrement irriter les peaux sensibles.",
     exampleProduct: "The Ordinary Niacinamide 10% + Zinc 1%",
     niche: false,
-    needs: ["pores", "sebum", "peau grasse", "acne", "boutons", "brillance"],
+    needs: ["peau-grasse", "points-noirs", "boutons"],
   },
   {
     id: "retinol",
@@ -98,7 +118,7 @@ export const skincareIngredients: SkincareIngredient[] = [
       "Rend la peau plus sensible au soleil : SPF impératif le matin. Ne jamais combiner avec un AHA/BHA le même soir. Déconseillé pendant la grossesse.",
     exampleProduct: "CeraVe Resurfacing Retinol Serum",
     niche: false,
-    needs: ["rides", "anti-age", "grain de peau", "acne", "cicatrices", "fermete"],
+    needs: ["rides", "boutons", "cicatrices"],
   },
   {
     id: "vitamine-c",
@@ -108,7 +128,7 @@ export const skincareIngredients: SkincareIngredient[] = [
     caution: "Certaines formes s'oxydent vite (couleur qui fonce) ; conserver à l'abri de la lumière.",
     exampleProduct: "La Roche-Posay Vitamine C10 Sérum",
     niche: false,
-    needs: ["teint terne", "eclat", "taches", "antioxydant", "pollution", "teint irregulier"],
+    needs: ["taches", "rides"],
   },
   {
     id: "acide-hyaluronique",
@@ -118,7 +138,7 @@ export const skincareIngredients: SkincareIngredient[] = [
     caution: "Sur peau très sèche et air sec, peut avoir l'effet inverse s'il n'est pas suivi d'une crème occlusive.",
     exampleProduct: "CeraVe Sérum Hydratant à l'Acide Hyaluronique",
     niche: false,
-    needs: ["hydratation", "peau seche", "tiraillements", "repulpant"],
+    needs: ["hydratation", "peau-seche"],
   },
   {
     id: "aha-bha",
@@ -129,7 +149,7 @@ export const skincareIngredients: SkincareIngredient[] = [
     caution: "Photosensibilisant : SPF obligatoire le matin qui suit. Ne pas cumuler plusieurs exfoliants le même soir.",
     exampleProduct: "Paula's Choice Skin Perfecting 2% BHA",
     niche: false,
-    needs: ["points noirs", "grain de peau", "exfoliation", "pores", "teint irregulier", "boutons"],
+    needs: ["points-noirs", "taches", "boutons"],
   },
   {
     id: "ceramides",
@@ -139,7 +159,7 @@ export const skincareIngredients: SkincareIngredient[] = [
     caution: "Très bien tolérés, y compris avec du rétinol ou des exfoliants.",
     exampleProduct: "CeraVe Crème Hydratante Visage (céramides + acide hyaluronique)",
     niche: false,
-    needs: ["barriere cutanee", "peau seche", "irritation", "sensibilite"],
+    needs: ["peau-seche", "rougeurs"],
   },
   {
     id: "spf",
@@ -150,7 +170,7 @@ export const skincareIngredients: SkincareIngredient[] = [
     caution: "À réappliquer en cas d'exposition prolongée au soleil.",
     exampleProduct: "La Roche-Posay Anthelios UVMune 400",
     niche: false,
-    needs: ["protection solaire", "vieillissement", "taches", "uv"],
+    needs: ["protection"],
   },
   {
     id: "acide-salicylique",
@@ -161,7 +181,7 @@ export const skincareIngredients: SkincareIngredient[] = [
     caution: "Peut assécher si utilisé sur toute la surface du visage trop souvent.",
     exampleProduct: "La Roche-Posay Effaclar Duo+",
     niche: false,
-    needs: ["boutons", "points noirs", "peau grasse", "pores", "acne"],
+    needs: ["boutons", "points-noirs", "peau-grasse"],
   },
   {
     id: "acide-glycolique",
@@ -172,7 +192,7 @@ export const skincareIngredients: SkincareIngredient[] = [
     caution: "Photosensibilisant, SPF indispensable le lendemain matin.",
     exampleProduct: "Pixi Glow Tonic",
     niche: false,
-    needs: ["teint terne", "grain de peau", "texture", "eclat", "cicatrices"],
+    needs: ["taches", "cicatrices"],
   },
   {
     id: "acide-lactique",
@@ -183,7 +203,7 @@ export const skincareIngredients: SkincareIngredient[] = [
     caution: "Moins irritant que le glycolique mais reste photosensibilisant.",
     exampleProduct: "The Ordinary Lactic Acid 5% + HA",
     niche: false,
-    needs: ["peau sensible", "exfoliation douce", "hydratation", "debutant"],
+    needs: ["peau-seche", "hydratation"],
   },
   {
     id: "squalane",
@@ -194,7 +214,7 @@ export const skincareIngredients: SkincareIngredient[] = [
     caution: "Très bien toléré, y compris peaux grasses et acnéiques.",
     exampleProduct: "The Ordinary 100% Plant-Derived Squalane",
     niche: false,
-    needs: ["hydratation", "peau grasse", "non comedogene", "sebum", "peau mixte"],
+    needs: ["peau-grasse", "hydratation"],
   },
   {
     id: "peptides",
@@ -205,7 +225,7 @@ export const skincareIngredients: SkincareIngredient[] = [
     caution: "Aucune précaution particulière, se combine bien avec le reste de la routine.",
     exampleProduct: "The Inkey List Multi-Peptide Serum",
     niche: false,
-    needs: ["fermete", "rides", "anti-age", "elasticite"],
+    needs: ["fermete", "rides"],
   },
   {
     id: "cafeine",
@@ -216,7 +236,7 @@ export const skincareIngredients: SkincareIngredient[] = [
     caution: "Aucune, applicable même sur peau sensible.",
     exampleProduct: "The Ordinary Caffeine Solution 5% + EGCG",
     niche: false,
-    needs: ["cernes", "poches", "contour des yeux", "fatigue", "yeux gonfles"],
+    needs: ["cernes"],
   },
   {
     id: "vitamine-e",
@@ -227,7 +247,7 @@ export const skincareIngredients: SkincareIngredient[] = [
     caution: "Peut être comédogène en trop grande quantité sur peau grasse.",
     exampleProduct: "NIVEA Q10 Huile Sèche Vitamine E",
     niche: false,
-    needs: ["antioxydant", "peau seche", "nourrissant"],
+    needs: ["peau-seche", "hydratation"],
   },
   {
     id: "aloe-vera",
@@ -238,7 +258,7 @@ export const skincareIngredients: SkincareIngredient[] = [
     caution: "Vérifier l'absence d'alcool ou de parfum ajouté dans les gels du commerce.",
     exampleProduct: "Lily of the Desert Aloe Vera Gel 99.5%",
     niche: false,
-    needs: ["apaisant", "coup de soleil", "irritation", "hydratation legere", "rasage"],
+    needs: ["rougeurs", "hydratation"],
   },
   {
     id: "argile-verte",
@@ -249,7 +269,7 @@ export const skincareIngredients: SkincareIngredient[] = [
     caution: "Asséchante : à éviter sur peau déjà sensibilisée ou en cours de traitement rétinol.",
     exampleProduct: "L'Argile Verte Surfine Argiletz",
     niche: false,
-    needs: ["peau grasse", "points noirs", "purifiant", "masque", "pores", "sebum"],
+    needs: ["peau-grasse", "points-noirs", "purifiant"],
   },
   {
     id: "huile-jojoba",
@@ -260,7 +280,7 @@ export const skincareIngredients: SkincareIngredient[] = [
     caution: "Patch test recommandé, comme pour toute huile végétale.",
     exampleProduct: "Huile de Jojoba Bio Weleda",
     niche: false,
-    needs: ["peau mixte", "hydratation", "non comedogene", "sebum"],
+    needs: ["peau-grasse", "hydratation"],
   },
   {
     id: "bakuchiol",
@@ -271,7 +291,7 @@ export const skincareIngredients: SkincareIngredient[] = [
     caution: "Très bien toléré, y compris par les peaux réactives et pendant la grossesse.",
     exampleProduct: "Typology Sérum Bakuchiol",
     niche: true,
-    needs: ["rides", "anti-age", "grain de peau", "peau sensible", "alternative retinol"],
+    needs: ["rides"],
   },
   {
     id: "acide-azelaique",
@@ -282,7 +302,7 @@ export const skincareIngredients: SkincareIngredient[] = [
     caution: "Léger picotement possible les premiers jours, disparaît avec l'accoutumance.",
     exampleProduct: "The Ordinary Azelaic Acid Suspension 10%",
     niche: true,
-    needs: ["boutons", "acne", "taches", "rosacee", "rougeurs", "teint irregulier"],
+    needs: ["boutons", "taches", "rougeurs"],
   },
   {
     id: "centella-asiatica",
@@ -293,7 +313,7 @@ export const skincareIngredients: SkincareIngredient[] = [
     caution: "Aucune précaution particulière, convient aux peaux les plus réactives.",
     exampleProduct: "Purito Centella Green Level Buffet Serum",
     niche: true,
-    needs: ["apaisant", "rougeurs", "sensibilite", "reparation", "barriere cutanee"],
+    needs: ["rougeurs", "peau-seche"],
   },
   {
     id: "peptides-cuivre",
@@ -304,7 +324,7 @@ export const skincareIngredients: SkincareIngredient[] = [
     caution: "Ne pas mélanger avec la vitamine C ou les acides le même soir : ça neutralise l'effet du cuivre.",
     exampleProduct: "Osmosis MD Catalyst AC-11",
     niche: true,
-    needs: ["fermete", "rides", "anti-age", "collagene", "cicatrisation"],
+    needs: ["fermete", "cicatrices"],
   },
   {
     id: "panthenol",
@@ -315,7 +335,7 @@ export const skincareIngredients: SkincareIngredient[] = [
     caution: "Aucune, convient à tous les types de peau.",
     exampleProduct: "La Roche-Posay Cicaplast Baume B5",
     niche: true,
-    needs: ["apaisant", "hydratation", "irritation", "reparation", "sensibilite"],
+    needs: ["rougeurs", "hydratation"],
   },
   {
     id: "huile-rose-musquee",
@@ -326,7 +346,7 @@ export const skincareIngredients: SkincareIngredient[] = [
     caution: "S'oxyde vite : conserver au frais et à l'abri de la lumière.",
     exampleProduct: "Trilogy Rosehip Oil Antioxidant+",
     niche: true,
-    needs: ["cicatrices", "taches", "anti-age", "nourrissant"],
+    needs: ["cicatrices", "taches"],
   },
   {
     id: "acide-tranexamique",
@@ -337,7 +357,7 @@ export const skincareIngredients: SkincareIngredient[] = [
     caution: "Résultats visibles seulement après plusieurs semaines d'usage régulier.",
     exampleProduct: "Naturium Tranexamic Acid Topical Acid Serum",
     niche: true,
-    needs: ["taches", "melasma", "hyperpigmentation", "teint irregulier"],
+    needs: ["taches"],
   },
   {
     id: "acide-kojique",
@@ -348,7 +368,7 @@ export const skincareIngredients: SkincareIngredient[] = [
     caution: "Peut sensibiliser la peau au soleil : SPF impératif le lendemain.",
     exampleProduct: "PIXI Beauty Kojic Serum",
     niche: true,
-    needs: ["taches", "eclaircissant", "teint irregulier", "marques"],
+    needs: ["taches"],
   },
   {
     id: "arbutine",
@@ -359,7 +379,7 @@ export const skincareIngredients: SkincareIngredient[] = [
     caution: "Bien tolérée, mais efficacité progressive : pas de résultat en quelques jours.",
     exampleProduct: "The Ordinary Alpha Arbutin 2% + HA",
     niche: true,
-    needs: ["taches", "eclaircissant doux", "hyperpigmentation", "teint irregulier"],
+    needs: ["taches"],
   },
   {
     id: "zinc-pca",
@@ -370,7 +390,7 @@ export const skincareIngredients: SkincareIngredient[] = [
     caution: "Aucune précaution particulière.",
     exampleProduct: "The Ordinary Niacinamide 10% + Zinc 1%",
     niche: true,
-    needs: ["peau grasse", "acne", "sebum", "inflammation", "boutons"],
+    needs: ["peau-grasse", "boutons"],
   },
   {
     id: "bisabolol",
@@ -381,7 +401,7 @@ export const skincareIngredients: SkincareIngredient[] = [
     caution: "Aucune, très bien toléré même par les peaux les plus réactives.",
     exampleProduct: "Typology Sérum au Bisabolol",
     niche: true,
-    needs: ["apaisant", "rougeurs", "sensibilite", "camomille"],
+    needs: ["rougeurs"],
   },
   {
     id: "ectoine",
@@ -392,7 +412,7 @@ export const skincareIngredients: SkincareIngredient[] = [
     caution: "Aucune, convient aux peaux les plus fragiles.",
     exampleProduct: "Gallinée Ectoine Shield Serum",
     niche: true,
-    needs: ["hydratation extreme", "peau reactive", "pollution", "stress environnemental"],
+    needs: ["hydratation", "rougeurs"],
   },
   {
     id: "argireline",
@@ -403,7 +423,7 @@ export const skincareIngredients: SkincareIngredient[] = [
     caution: "Effet plus subtil que le botox, résultats progressifs sur plusieurs semaines.",
     exampleProduct: "The Inkey List Peptide Moisturizer",
     niche: true,
-    needs: ["rides d'expression", "anti-age", "front", "peptide"],
+    needs: ["rides"],
   },
   {
     id: "extrait-reglisse",
@@ -414,7 +434,7 @@ export const skincareIngredients: SkincareIngredient[] = [
     caution: "Aucune précaution particulière.",
     exampleProduct: "COSRX Licorice Extract Vitamin C Serum",
     niche: true,
-    needs: ["taches", "apaisant", "eclaircissant", "rougeurs"],
+    needs: ["taches", "rougeurs"],
   },
   {
     id: "huile-nigelle",
@@ -425,7 +445,7 @@ export const skincareIngredients: SkincareIngredient[] = [
     caution: "Odeur prononcée ; patch test recommandé avant application sur tout le visage.",
     exampleProduct: "Huile de Nigelle Bio Aromazone",
     niche: true,
-    needs: ["acne", "antibacterien naturel", "apaisant", "imperfections"],
+    needs: ["boutons", "purifiant"],
   },
   {
     id: "charbon-actif",
@@ -436,39 +456,13 @@ export const skincareIngredients: SkincareIngredient[] = [
     caution: "Peut être asséchant : à réserver aux zones grasses (zone T) sur peau mixte.",
     exampleProduct: "Origins Clear Improvement Charcoal Mask",
     niche: true,
-    needs: ["purifiant", "peau grasse", "masque", "pores", "points noirs"],
+    needs: ["peau-grasse", "purifiant", "points-noirs"],
   },
 ];
 
-const DIACRITICS_PATTERN = new RegExp("[\\u0300-\\u036f]", "g");
-
-function normalize(value: string) {
-  return value.toLowerCase().normalize("NFD").replace(DIACRITICS_PATTERN, "");
-}
-
-// Mots-outils à ignorer pour que "j'ai des boutons" ne remonte pas toute la
-// bibliothèque à cause de "des" ou "ai" trouvés dans presque tous les textes.
-const STOPWORDS = new Set([
-  "le", "la", "les", "de", "des", "du", "un", "une", "et", "ou", "pour",
-  "avec", "sur", "au", "aux", "mon", "ma", "mes", "ton", "ta", "tes", "son",
-  "sa", "ses", "ce", "cet", "cette", "ces", "que", "qui", "quoi", "dont",
-  "j", "ai", "suis", "es", "est", "sont", "avoir", "etre", "jai", "tres",
-  "plus", "moins", "comment", "quel", "quelle",
-]);
-
-// Recherche par besoin exprimé librement ("j'ai des boutons", "peau sèche"...) :
-// tout mot significatif retrouvé dans le nom, l'usage ou les mots-clés d'un
-// ingrédient suffit à le faire remonter.
-export function searchSkincareIngredients(query: string): SkincareIngredient[] {
-  const words = normalize(query)
-    .split(/[^a-z0-9]+/)
-    .filter((w) => w.length >= 2 && !STOPWORDS.has(w));
-  if (words.length === 0) return skincareIngredients;
-
-  return skincareIngredients.filter((ingredient) => {
-    const haystack = normalize(
-      [ingredient.name, ingredient.whatItDoes, ...ingredient.needs].join(" ")
-    );
-    return words.some((word) => haystack.includes(word));
-  });
+// Filtre par étiquette cliquable (id de skincareNeeds). null/absent = pas de
+// filtre, on retourne toute la bibliothèque.
+export function filterSkincareIngredients(needId: string | null): SkincareIngredient[] {
+  if (!needId) return skincareIngredients;
+  return skincareIngredients.filter((ingredient) => ingredient.needs.includes(needId));
 }
