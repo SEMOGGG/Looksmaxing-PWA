@@ -106,7 +106,7 @@ export default function CoachPage() {
               {displayMessages.map((message) => (
                 <div
                   key={message.id}
-                  className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                  className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-relaxed ${
                     message.role === "user"
                       ? "bg-gradient-accent ml-auto text-white"
                       : "mr-auto border border-border bg-surface text-foreground"
