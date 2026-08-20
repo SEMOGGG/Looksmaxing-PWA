@@ -104,7 +104,7 @@ function pointInPolygon(x, y, poly) {
   return inside;
 }
 
-function drawLogo(size) {
+function renderLogoPixels(size) {
   const pixels = Buffer.alloc(size * size * 4);
   const pad = size * 0.06;
   const scale = (size - pad * 2) / 40;
@@ -173,7 +173,7 @@ function drawLogo(size) {
       pixels[idx + 3] = Math.round(alpha * 255);
     }
   }
-  return encodePNG(size, size, pixels);
+  return pixels;
 }
 
 const SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="1024" height="1024" role="img" aria-label="Logo Faciem">
@@ -201,8 +201,31 @@ const SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="
 </svg>
 `;
 
+// Fond noir de l'app (#0A0A0F, cf. BG dans generate-icons.mjs) : on aplatit
+// le rendu transparent dessus plutôt que de refaire tout le tracé.
+const APP_BG = [10, 10, 15];
+function flattenOnBackground(rgbaPixels, size, bg) {
+  const out = Buffer.alloc(size * size * 4);
+  for (let i = 0; i < size * size; i++) {
+    const idx = i * 4;
+    const a = rgbaPixels[idx + 3] / 255;
+    out[idx] = Math.round(rgbaPixels[idx] * a + bg[0] * (1 - a));
+    out[idx + 1] = Math.round(rgbaPixels[idx + 1] * a + bg[1] * (1 - a));
+    out[idx + 2] = Math.round(rgbaPixels[idx + 2] * a + bg[2] * (1 - a));
+    out[idx + 3] = 255;
+  }
+  return out;
+}
+
+const SIZE = 1024;
+const transparentPixels = renderLogoPixels(SIZE);
+const darkPixels = flattenOnBackground(transparentPixels, SIZE, APP_BG);
+
 mkdirSync("public/brand", { recursive: true });
 writeFileSync("public/brand/faciem-logo.svg", SVG);
-writeFileSync("public/brand/faciem-logo.png", drawLogo(1024));
+writeFileSync("public/brand/faciem-logo.png", encodePNG(SIZE, SIZE, transparentPixels));
+writeFileSync("public/brand/faciem-logo-dark.png", encodePNG(SIZE, SIZE, darkPixels));
 
-console.log("Logo exporté dans public/brand/ (faciem-logo.svg + faciem-logo.png, fond transparent, 1024x1024).");
+console.log(
+  "Logo exporté dans public/brand/ : faciem-logo.svg + faciem-logo.png (fond transparent) + faciem-logo-dark.png (fond noir), 1024x1024."
+);
