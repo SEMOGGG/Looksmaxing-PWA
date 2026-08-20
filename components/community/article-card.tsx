@@ -7,7 +7,7 @@ export function ArticleCard({ article }: { article: Article }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="rounded-2xl border border-border bg-surface p-5">
+    <div className="rounded-2xl border border-border bg-surface p-5 transition-colors hover:border-accent/40">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}

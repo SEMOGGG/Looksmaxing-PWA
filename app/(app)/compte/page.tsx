@@ -8,8 +8,11 @@ import { DemoProfileBanner } from "@/components/demo-profile-banner";
 import { ProgressChart } from "@/components/progress-chart";
 import { CheckIcon, LockIcon } from "@/components/icons";
 import { DeleteAccountSection } from "@/components/delete-account-section";
+import { WeightTracker } from "@/components/weight-tracker";
 import { getUserData, saveUserPlan } from "@/app/actions/user-data";
 import { getBilanHistory, type StoredBilan } from "@/app/actions/bilan";
+import { activityLevels, goalOptions } from "@/lib/onboarding";
+import type { OnboardingData } from "@/lib/onboarding";
 import type { Plan } from "@/lib/user-data";
 
 const historyDayMonth = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short" });
@@ -36,7 +39,7 @@ const premiumFeatures = [
 
 export default function ComptePage() {
   const { user } = useUser();
-  const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
+  const [profile, setProfile] = useState<OnboardingData | null>(null);
   const [isDemo, setIsDemo] = useState(false);
   const [plan, setPlan] = useState<Plan>("free");
   const [history, setHistory] = useState<StoredBilan[]>([]);
@@ -45,7 +48,7 @@ export default function ComptePage() {
   useEffect(() => {
     Promise.all([getUserData(), getBilanHistory()]).then(([{ profile: saved, plan: userPlan }, bilans]) => {
       if (saved) {
-        setPhotoDataUrl(saved.photoDataUrl);
+        setProfile(saved);
         setIsDemo(false);
       } else {
         setIsDemo(true);
@@ -93,7 +96,66 @@ export default function ComptePage() {
 
         {isDemo && <DemoProfileBanner />}
 
-        <h2 className="mt-6 text-base font-semibold text-foreground">
+        {!isDemo && profile && (
+          <>
+            <h2 className="mt-8 text-base font-semibold text-foreground">
+              Vos informations
+            </h2>
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="rounded-2xl border border-border bg-surface p-4 transition-colors hover:border-accent/50">
+                <p className="text-xs text-muted">Âge</p>
+                <p className="mt-1 text-base font-semibold text-foreground">
+                  {profile.age || "—"} {profile.age && "ans"}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border bg-surface p-4 transition-colors hover:border-accent/50">
+                <p className="text-xs text-muted">Taille</p>
+                <p className="mt-1 text-base font-semibold text-foreground">
+                  {profile.heightCm || "—"} {profile.heightCm && "cm"}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border bg-surface p-4 transition-colors hover:border-accent/50">
+                <p className="text-xs text-muted">Poids de référence</p>
+                <p className="mt-1 text-base font-semibold text-foreground">
+                  {profile.weightKg || "—"} {profile.weightKg && "kg"}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border bg-surface p-4 transition-colors hover:border-accent/50">
+                <p className="text-xs text-muted">Activité</p>
+                <p className="mt-1 text-base font-semibold text-foreground">
+                  {activityLevels.find((a) => a.value === profile.activityLevel)?.label ?? "—"}
+                </p>
+              </div>
+            </div>
+
+            {profile.goals.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {profile.goals.map((goal) => {
+                  const option = goalOptions.find((g) => g.value === goal);
+                  return option ? (
+                    <span
+                      key={goal}
+                      className="rounded-full bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent-strong"
+                    >
+                      {option.label}
+                    </span>
+                  ) : null;
+                })}
+              </div>
+            )}
+
+            <Link
+              href="/onboarding"
+              className="mt-3 inline-block text-sm font-medium text-accent-strong underline underline-offset-2 transition-colors hover:text-accent"
+            >
+              Modifier mes informations
+            </Link>
+
+            <WeightTracker isDemo={isDemo} />
+          </>
+        )}
+
+        <h2 className="mt-8 text-base font-semibold text-foreground">
           Votre progression
         </h2>
         {!isPremium ? (
@@ -144,7 +206,7 @@ export default function ComptePage() {
           {visibleHistory.map((entry) => (
             <div
               key={entry.createdAt}
-              className="flex items-center justify-between rounded-2xl border border-border bg-surface p-4"
+              className="flex items-center justify-between rounded-2xl border border-border bg-surface p-4 transition-colors hover:border-accent/50"
             >
               <span className="text-sm text-foreground">
                 {historyFullDate.format(new Date(entry.createdAt))}
@@ -172,11 +234,13 @@ export default function ComptePage() {
           Suivi photo comparatif
         </h2>
         {isPremium ? (
-          <div className="mt-3 flex items-center gap-4 rounded-2xl border border-border bg-surface p-4">
+          <div className="mt-3 flex items-center gap-4 rounded-2xl border border-border bg-surface p-4 transition-colors hover:border-accent/50">
             <div className="flex shrink-0 gap-2">
               {[
-                bilansWithPhotos.length > 0 ? bilansWithPhotos[bilansWithPhotos.length - 1].photoDataUrl : photoDataUrl,
-                bilansWithPhotos.length > 0 ? bilansWithPhotos[0].photoDataUrl : photoDataUrl,
+                bilansWithPhotos.length > 0
+                  ? bilansWithPhotos[bilansWithPhotos.length - 1].photoDataUrl
+                  : profile?.photoDataUrl ?? null,
+                bilansWithPhotos.length > 0 ? bilansWithPhotos[0].photoDataUrl : profile?.photoDataUrl ?? null,
               ].map((url, i) =>
                 url ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -184,7 +248,7 @@ export default function ComptePage() {
                     key={i}
                     src={url}
                     alt={i === 0 ? "Photo la plus ancienne" : "Photo la plus récente"}
-                    className="h-16 w-16 rounded-xl object-cover"
+                    className="h-16 w-16 rounded-xl object-cover transition-transform hover:scale-105"
                   />
                 ) : (
                   <div
@@ -224,7 +288,7 @@ export default function ComptePage() {
 
         <h2 className="mt-8 text-base font-semibold text-foreground">Abonnement</h2>
         <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="rounded-2xl border border-border bg-surface p-5">
+          <div className="rounded-2xl border border-border bg-surface p-5 transition-colors hover:border-accent/50">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-semibold text-foreground">Gratuit</h3>
               {!isPremium && (

@@ -54,7 +54,7 @@ export function PostCard({
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-surface p-5">
+    <div className="rounded-2xl border border-border bg-surface p-5 transition-colors hover:border-accent/30">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-semibold text-accent-strong">
@@ -84,9 +84,11 @@ export function PostCard({
         <button
           type="button"
           onClick={handleLike}
-          className={`flex items-center gap-1.5 transition-colors ${liked ? "text-accent-strong" : "hover:text-foreground"}`}
+          className={`group flex items-center gap-1.5 transition-colors ${liked ? "text-accent-strong" : "hover:text-foreground"}`}
         >
-          <HeartIcon className="h-4 w-4" />
+          <HeartIcon
+            className={`h-4 w-4 transition-transform group-active:scale-125 ${liked ? "scale-110" : ""}`}
+          />
           {post.likes + (liked ? 1 : 0)}
         </button>
         <button

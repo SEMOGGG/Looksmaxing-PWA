@@ -172,7 +172,7 @@ export default function AnalysePage() {
             return (
               <div
                 key={category.key}
-                className="rounded-2xl border border-border bg-surface p-5"
+                className="rounded-2xl border border-border bg-surface p-5 transition-colors hover:border-accent/40"
               >
                 <div className="flex items-center justify-between gap-2">
                   <h4 className="text-base font-semibold text-foreground">

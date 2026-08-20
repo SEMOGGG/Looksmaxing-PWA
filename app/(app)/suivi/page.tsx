@@ -40,13 +40,13 @@ function PhotoTimeline({
         {withPhoto.map((entry) => (
           <div
             key={entry.createdAt}
-            className="w-28 shrink-0 rounded-2xl border border-border bg-surface p-2 text-center"
+            className="w-28 shrink-0 rounded-2xl border border-border bg-surface p-2 text-center transition-colors hover:border-accent/40"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={getUrl(entry) ?? undefined}
               alt={fullDate.format(new Date(entry.createdAt))}
-              className="aspect-square w-full rounded-xl object-cover"
+              className="aspect-square w-full rounded-xl object-cover transition-transform hover:scale-105"
             />
             <p className="mt-1.5 text-[11px] leading-tight text-muted">
               {dayMonth.format(new Date(entry.createdAt))}
@@ -189,7 +189,10 @@ export default function SuiviPage() {
                 </p>
                 <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
                   {latest.categories.map((category) => (
-                    <div key={category.key} className="rounded-2xl border border-border bg-surface p-5">
+                    <div
+                      key={category.key}
+                      className="rounded-2xl border border-border bg-surface p-5 transition-colors hover:border-accent/40"
+                    >
                       <div className="flex items-center justify-between gap-2">
                         <h4 className="text-base font-semibold text-foreground">{category.label}</h4>
                         <span className="font-heading text-lg font-semibold text-accent-strong">
