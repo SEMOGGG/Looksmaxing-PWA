@@ -2,6 +2,7 @@ import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { Logo } from "@/components/logo";
+import { PhoneMockup } from "@/components/phone-mockup";
 import {
   ArrowRightIcon,
   CameraIcon,
@@ -12,6 +13,27 @@ import {
   SparklesIcon,
 } from "@/components/icons";
 import { APP_NAME } from "@/lib/navigation";
+
+const demoScreens = [
+  {
+    src: "/marketing/screenshot-analyse.jpg",
+    alt: "Capture d'écran du bilan Analyse dans l'app Faciem, avec le score global",
+    title: "Un bilan clair, en un coup d'œil",
+    description: "Un score global et une analyse par catégorie, générés par IA à partir de vos photos.",
+  },
+  {
+    src: "/marketing/screenshot-coach.jpg",
+    alt: "Capture d'écran d'une conversation avec le Coach IA dans l'app Faciem",
+    title: "Un coach disponible au quotidien",
+    description: "Des conseils concrets et personnalisés, à chaque fois que vous en avez besoin.",
+  },
+  {
+    src: "/marketing/screenshot-nutrition.jpg",
+    alt: "Capture d'écran du plan nutritionnel dans l'app Faciem, avec besoins caloriques et macronutriments",
+    title: "Un plan nutrition sur mesure",
+    description: "Vos besoins caloriques et votre répartition de macros, calculés et expliqués simplement.",
+  },
+];
 
 const benefits = [
   {
@@ -67,7 +89,7 @@ export default function LandingPage() {
       <SiteHeader />
       <main className="flex-1 overflow-x-clip">
         {/* Hero */}
-        <section className="relative px-5 pt-14 pb-16 sm:pt-20 sm:pb-24">
+        <section className="relative overflow-hidden px-5 pt-14 pb-16 sm:pt-20 sm:pb-24">
           <div
             aria-hidden
             className="animate-drift pointer-events-none absolute -top-24 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-accent opacity-25 blur-[100px] sm:h-[28rem] sm:w-[28rem]"
@@ -82,32 +104,78 @@ export default function LandingPage() {
             className="pointer-events-none absolute top-6 right-4 h-24 w-24 opacity-[0.08] sm:h-36 sm:w-36 sm:right-10"
           />
 
-          <div className="relative mx-auto max-w-2xl text-center">
-            <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface/80 px-3 py-1 text-xs font-medium text-muted backdrop-blur">
-              <Logo idPrefix="badge-logo" className="h-3.5 w-3.5" />
-              Coaching apparence &amp; bien-être
-            </span>
-            <h1 className="font-heading mt-5 text-4xl font-semibold leading-tight tracking-tight text-foreground sm:text-6xl">
-              Révélez le meilleur de vous-même,{" "}
-              <span className="text-gradient">à votre rythme</span>
-            </h1>
-            <p className="mt-5 text-base leading-relaxed text-muted sm:text-lg">
-              {APP_NAME} vous accompagne avec bienveillance : analyse claire de votre
-              profil, nutrition personnalisée, routine skincare et suivi dans le temps.
-              Un espace pensé pour vous encourager, jamais pour vous juger.
-            </p>
-
-            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-              <Link
-                href="/onboarding"
-                className="glow bg-gradient-accent inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3.5 text-sm font-semibold text-white transition-transform hover:scale-[1.02] sm:w-auto"
-              >
-                Commencer
-                <ArrowRightIcon className="h-4 w-4" />
-              </Link>
-              <span className="text-xs text-muted">
-                Gratuit pour commencer · réservé aux 18 ans et plus
+          <div className="relative mx-auto grid max-w-5xl grid-cols-1 items-center gap-12 lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="text-center lg:text-left">
+              <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface/80 px-3 py-1 text-xs font-medium text-muted backdrop-blur">
+                <Logo idPrefix="badge-logo" className="h-3.5 w-3.5" />
+                Coaching apparence &amp; bien-être
               </span>
+              <h1 className="font-heading mt-5 text-4xl leading-[1.05] font-semibold tracking-tight text-foreground sm:text-6xl lg:text-7xl">
+                Révélez le meilleur
+                <br />
+                de vous-même,{" "}
+                <span className="text-gradient font-heading-italic">à votre rythme</span>
+              </h1>
+              <p className="mt-5 max-w-xl text-base leading-relaxed text-muted sm:text-lg lg:mx-0 lg:mr-auto">
+                {APP_NAME} vous accompagne avec bienveillance : analyse claire de votre
+                profil, nutrition personnalisée, routine skincare et suivi dans le temps.
+                Un espace pensé pour vous encourager, jamais pour vous juger.
+              </p>
+
+              <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-start">
+                <Link
+                  href="/onboarding"
+                  className="glow bg-gradient-accent inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3.5 text-sm font-semibold text-white transition-transform hover:scale-[1.02] sm:w-auto"
+                >
+                  Commencer
+                  <ArrowRightIcon className="h-4 w-4" />
+                </Link>
+                <span className="text-xs text-muted">
+                  Gratuit pour commencer · réservé aux 18 ans et plus
+                </span>
+              </div>
+            </div>
+
+            <div className="relative mx-auto flex h-[340px] w-full max-w-sm items-center justify-center sm:h-[420px]">
+              <PhoneMockup
+                src="/marketing/screenshot-analyse.jpg"
+                alt="Capture d'écran du bilan Analyse dans l'app Faciem"
+                tilt={-6}
+                className="absolute left-2 top-6 z-10 max-w-[190px] opacity-90 sm:top-2 sm:max-w-[210px]"
+              />
+              <PhoneMockup
+                src="/marketing/screenshot-coach.jpg"
+                alt="Capture d'écran d'une conversation avec le Coach IA dans l'app Faciem"
+                tilt={5}
+                className="glow relative z-20 max-w-[210px] sm:max-w-[230px]"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Démonstration */}
+        <section className="border-t border-border bg-surface-muted">
+          <div className="mx-auto w-full max-w-5xl px-5 py-16 sm:py-20">
+            <div className="mx-auto max-w-xl text-center">
+              <h2 className="font-heading text-2xl font-semibold text-foreground sm:text-3xl">
+                Découvrez l&rsquo;app en images
+              </h2>
+              <p className="mt-3 text-sm leading-relaxed text-muted sm:text-base">
+                Ce ne sont pas des maquettes : ce sont de vraies captures d&rsquo;écran de
+                l&rsquo;application.
+              </p>
+            </div>
+
+            <div className="mt-10 grid grid-cols-1 gap-10 sm:grid-cols-3 sm:gap-6">
+              {demoScreens.map((screen) => (
+                <div key={screen.src} className="flex flex-col items-center text-center">
+                  <PhoneMockup src={screen.src} alt={screen.alt} className="max-w-[200px]" />
+                  <h3 className="mt-5 text-base font-semibold text-foreground">{screen.title}</h3>
+                  <p className="mt-1.5 max-w-[220px] text-sm leading-relaxed text-muted">
+                    {screen.description}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
         </section>

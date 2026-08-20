@@ -46,6 +46,11 @@ h3,
   font-family: var(--font-heading), Arial, Helvetica, sans-serif;
 }
 
+.font-heading-italic {
+  font-family: var(--font-heading), Arial, Helvetica, sans-serif;
+  font-style: italic;
+}
+
 .text-gradient {
   background: var(--gradient-accent);
   background-clip: text;
