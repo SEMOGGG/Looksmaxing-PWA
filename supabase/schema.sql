@@ -97,6 +97,49 @@ create trigger community_likes_after_delete
   after delete on community_likes
   for each row execute function community_sync_likes_count();
 
+-- Notation des commentaires ("cette astuce est utile") : alimente le score
+-- de réputation (badges Débutant/LTN/MTN/HTN/Chad) au même titre que les
+-- likes sur les publications, voir computeLeaderboard dans
+-- app/(app)/communaute/actions.ts.
+create table if not exists community_comment_votes (
+  comment_id uuid not null references community_comments (id) on delete cascade,
+  author_id text not null,  -- Clerk user id de la personne qui note
+  created_at timestamptz not null default now(),
+  primary key (comment_id, author_id)
+);
+
+alter table community_comments add column if not exists helpful_count integer not null default 0;
+
+create index if not exists community_comment_votes_comment_idx on community_comment_votes (comment_id);
+
+create or replace function community_sync_helpful_count()
+returns trigger as $$
+begin
+  if (tg_op = 'INSERT') then
+    update community_comments set helpful_count = helpful_count + 1 where id = new.comment_id;
+    return new;
+  elsif (tg_op = 'DELETE') then
+    update community_comments set helpful_count = greatest(helpful_count - 1, 0) where id = old.comment_id;
+    return old;
+  end if;
+  return null;
+end;
+$$ language plpgsql;
+
+drop trigger if exists community_comment_votes_after_insert on community_comment_votes;
+create trigger community_comment_votes_after_insert
+  after insert on community_comment_votes
+  for each row execute function community_sync_helpful_count();
+
+drop trigger if exists community_comment_votes_after_delete on community_comment_votes;
+create trigger community_comment_votes_after_delete
+  after delete on community_comment_votes
+  for each row execute function community_sync_helpful_count();
+
+alter table community_comment_votes enable row level security;
+-- Aucune policy pour "anon" : écrit uniquement via la Server Action
+-- toggleCommentVote (clé secrète), après vérification Clerk.
+
 -- RLS : toutes les écritures passent par les Route Handlers Next.js
 -- (côté serveur, avec la clé secrète), jamais directement depuis le
 -- navigateur. Les lectures publiques ne remontent que les contenus

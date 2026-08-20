@@ -1,21 +1,73 @@
 "use client";
 
 import { useState } from "react";
-import { categoryLabels, moderateContent, type Post } from "@/lib/community";
+import { categoryLabels, moderateContent, type Comment, type Post } from "@/lib/community";
 import { formatRelativeTime } from "@/lib/format-time";
-import { FlagIcon, HeartIcon, MessageIcon, ShieldCheckIcon } from "@/components/icons";
+import { ReputationBadge } from "@/components/community/reputation-badge";
+import { FlagIcon, HeartIcon, MessageIcon, ThumbsUpIcon } from "@/components/icons";
+
+function CommentRow({
+  comment,
+  canParticipate,
+  onVote,
+}: {
+  comment: Comment;
+  canParticipate: boolean;
+  onVote: (commentId: string, voted: boolean) => void;
+}) {
+  const [voted, setVoted] = useState(false);
+
+  function handleVote() {
+    const next = !voted;
+    setVoted(next);
+    onVote(comment.id, next);
+  }
+
+  return (
+    <div className="flex gap-2.5">
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-muted text-xs font-semibold text-muted">
+        {comment.author.charAt(0).toUpperCase()}
+      </span>
+      <div className="flex-1">
+        <p className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+          {comment.author}
+          <ReputationBadge badge={comment.authorBadge} />
+          <span className="font-normal text-muted">· {formatRelativeTime(comment.createdAt)}</span>
+        </p>
+        <p className="mt-0.5 text-sm text-muted">{comment.content}</p>
+        {canParticipate && (
+          <button
+            type="button"
+            onClick={handleVote}
+            className={`mt-1 flex items-center gap-1 text-xs transition-colors ${
+              voted ? "text-accent-strong" : "text-muted hover:text-foreground"
+            }`}
+          >
+            <ThumbsUpIcon className={`h-3 w-3 ${voted ? "scale-110" : ""}`} />
+            Astuce utile
+            {comment.helpfulCount + (voted ? 1 : 0) > 0 && (
+              <span>({comment.helpfulCount + (voted ? 1 : 0)})</span>
+            )}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export function PostCard({
   post,
   canParticipate,
   onLike,
   onComment,
+  onCommentVote,
   onReport,
 }: {
   post: Post;
   canParticipate: boolean;
   onLike: (postId: string, liked: boolean) => void;
   onComment: (postId: string, content: string) => Promise<string | null>;
+  onCommentVote: (commentId: string, voted: boolean) => void;
   onReport: (postId: string) => Promise<string | null>;
 }) {
   const [liked, setLiked] = useState(false);
@@ -63,16 +115,7 @@ export function PostCard({
           <div>
             <div className="flex items-center gap-1.5">
               <p className="text-sm font-semibold text-foreground">{post.author}</p>
-              {post.authorTier.id === "verifie" ? (
-                <span className="flex items-center gap-0.5 rounded-full bg-accent-soft px-1.5 py-0.5 text-[10px] font-semibold text-accent-strong">
-                  <ShieldCheckIcon className="h-2.5 w-2.5" />
-                  Vérifié
-                </span>
-              ) : post.authorTier.id !== "nouveau" ? (
-                <span className="rounded-full bg-surface-muted px-1.5 py-0.5 text-[10px] font-medium text-muted">
-                  {post.authorTier.label}
-                </span>
-              ) : null}
+              <ReputationBadge badge={post.authorBadge} />
             </div>
             <p className="text-xs text-muted">
               {formatRelativeTime(post.createdAt)} · {categoryLabels[post.category]}
@@ -127,20 +170,12 @@ export function PostCard({
       {commentsOpen && (
         <div className="mt-4 flex flex-col gap-3 border-t border-border pt-4">
           {post.comments.map((comment) => (
-            <div key={comment.id} className="flex gap-2.5">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-muted text-xs font-semibold text-muted">
-                {comment.author.charAt(0).toUpperCase()}
-              </span>
-              <div>
-                <p className="text-xs font-medium text-foreground">
-                  {comment.author}{" "}
-                  <span className="font-normal text-muted">
-                    · {formatRelativeTime(comment.createdAt)}
-                  </span>
-                </p>
-                <p className="mt-0.5 text-sm text-muted">{comment.content}</p>
-              </div>
-            </div>
+            <CommentRow
+              key={comment.id}
+              comment={comment}
+              canParticipate={canParticipate}
+              onVote={onCommentVote}
+            />
           ))}
           {post.comments.length === 0 && (
             <p className="text-xs text-muted">Aucun commentaire pour l&rsquo;instant.</p>

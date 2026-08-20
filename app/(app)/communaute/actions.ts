@@ -8,9 +8,13 @@ import {
   moderateContent,
   seedPosts,
   getContributionTier,
+  getReputationTier,
+  computeLeaderboardBadge,
   MEDIA_UNLOCK_THRESHOLD,
   type ArticleCategory,
   type ContributionTier,
+  type LeaderboardBadge,
+  type LeaderboardEntry,
   type Post,
 } from "@/lib/community";
 import {
@@ -24,6 +28,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { moderateMediaImages } from "@/lib/moderation";
 
 const postIdSchema = z.string().uuid();
+const commentIdSchema = z.string().uuid();
 
 // Anti double-soumission / anti-rafale : en plus du quota glissant
 // (checkRateLimit "communityWrite"), on refuse toute publication trop
@@ -94,32 +99,54 @@ async function getContributionCount(
   return (postCount ?? 0) + (commentCount ?? 0);
 }
 
-// Même calcul, mais pour plusieurs auteurs à la fois (un fil de publications
-// entier) en 2 requêtes groupées plutôt qu'une paire de requêtes par post —
-// c'est ce qui permet d'afficher un badge de palier sur chaque publication
-// sans faire exploser le nombre de requêtes.
-async function getAuthorTiers(
-  supabase: ReturnType<typeof getSupabaseServerClient>,
-  authorIds: string[]
-): Promise<Record<string, ContributionTier>> {
-  const uniqueIds = Array.from(new Set(authorIds));
-  if (uniqueIds.length === 0) return {};
-
+// Classement complet de la Communauté par points de réputation : 1 point
+// par like reçu sur une publication + 1 point par vote "utile" reçu sur un
+// commentaire. "seed" (publications éditoriales de démonstration) est
+// exclu — ce n'est pas un vrai membre et fausserait l'agrégation, plusieurs
+// posts de démo partageant ce même author_id.
+async function computeLeaderboard(
+  supabase: ReturnType<typeof getSupabaseServerClient>
+): Promise<LeaderboardEntry[]> {
   const [{ data: postRows }, { data: commentRows }] = await Promise.all([
-    supabase.from("community_posts").select("author_id").in("author_id", uniqueIds),
-    supabase.from("community_comments").select("author_id").in("author_id", uniqueIds),
+    supabase.from("community_posts").select("author_id, author_display_name, likes_count").neq("author_id", "seed"),
+    supabase
+      .from("community_comments")
+      .select("author_id, author_display_name, helpful_count")
+      .neq("author_id", "seed"),
   ]);
 
-  const counts: Record<string, number> = {};
-  for (const row of [...(postRows ?? []), ...(commentRows ?? [])]) {
-    counts[row.author_id] = (counts[row.author_id] ?? 0) + 1;
+  const points: Record<string, number> = {};
+  const names: Record<string, string> = {};
+  for (const row of postRows ?? []) {
+    points[row.author_id] = (points[row.author_id] ?? 0) + (row.likes_count ?? 0);
+    names[row.author_id] = row.author_display_name;
+  }
+  for (const row of commentRows ?? []) {
+    points[row.author_id] = (points[row.author_id] ?? 0) + (row.helpful_count ?? 0);
+    names[row.author_id] = row.author_display_name;
   }
 
-  const tiers: Record<string, ContributionTier> = {};
-  for (const id of uniqueIds) {
-    tiers[id] = getContributionTier(counts[id] ?? 0);
-  }
-  return tiers;
+  return Object.entries(points)
+    .map(([authorId, pts]) => ({ authorId, displayName: names[authorId] ?? "Membre", points: pts }))
+    .sort((a, b) => b.points - a.points)
+    .map((entry, index) => ({
+      ...entry,
+      rank: index + 1,
+      badge: computeLeaderboardBadge(entry.points, index + 1),
+    }));
+}
+
+function badgeMapFromLeaderboard(leaderboard: LeaderboardEntry[]): Record<string, LeaderboardBadge> {
+  const map: Record<string, LeaderboardBadge> = {};
+  for (const entry of leaderboard) map[entry.authorId] = entry.badge;
+  return map;
+}
+
+const ZERO_POINTS_BADGE: LeaderboardBadge = { kind: "tier", tier: getReputationTier(0) };
+
+export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
+  const supabase = getSupabaseServerClient();
+  return computeLeaderboard(supabase);
 }
 
 async function checkFloodCooldown(
@@ -148,14 +175,12 @@ export async function getPosts(): Promise<Post[]> {
 
   const { data: comments } = await supabase
     .from("community_comments")
-    .select("id, post_id, author_display_name, content, created_at")
+    .select("id, post_id, author_id, author_display_name, content, helpful_count, created_at")
     .eq("moderation_status", "approved")
     .order("created_at", { ascending: true });
 
-  const authorTiers = await getAuthorTiers(
-    supabase,
-    posts.map((post) => post.author_id)
-  );
+  const leaderboard = await computeLeaderboard(supabase);
+  const badges = badgeMapFromLeaderboard(leaderboard);
 
   return posts.map((post) => ({
     id: post.id,
@@ -166,7 +191,7 @@ export async function getPosts(): Promise<Post[]> {
     likes: post.likes_count,
     mediaUrl: post.media_url ?? null,
     mediaType: (post.media_type as "image" | "video" | null) ?? null,
-    authorTier: authorTiers[post.author_id] ?? getContributionTier(0),
+    authorBadge: badges[post.author_id] ?? ZERO_POINTS_BADGE,
     comments: (comments ?? [])
       .filter((comment) => comment.post_id === post.id)
       .map((comment) => ({
@@ -174,6 +199,8 @@ export async function getPosts(): Promise<Post[]> {
         author: comment.author_display_name,
         content: comment.content,
         createdAt: comment.created_at,
+        helpfulCount: comment.helpful_count ?? 0,
+        authorBadge: badges[comment.author_id] ?? ZERO_POINTS_BADGE,
       })),
   }));
 }
@@ -379,7 +406,19 @@ export async function toggleLike(postId: string, liked: boolean): Promise<Action
   if (!parsedPostId.success) return { ok: false, error: "Publication invalide." };
 
   const supabase = getSupabaseServerClient();
+
   if (liked) {
+    // Les likes valent des points de réputation (badges Chad/HTN/...) : on
+    // empêche de s'auto-liker pour ne pas fausser le classement.
+    const { data: post } = await supabase
+      .from("community_posts")
+      .select("author_id")
+      .eq("id", postId)
+      .maybeSingle();
+    if (post?.author_id === userId) {
+      return { ok: false, error: "Vous ne pouvez pas aimer votre propre publication." };
+    }
+
     const { error } = await supabase
       .from("community_likes")
       .insert({ post_id: postId, author_id: userId });
@@ -392,6 +431,41 @@ export async function toggleLike(postId: string, liked: boolean): Promise<Action
       .from("community_likes")
       .delete()
       .eq("post_id", postId)
+      .eq("author_id", userId);
+  }
+  return { ok: true, posts: await getPosts() };
+}
+
+export async function toggleCommentVote(commentId: string, voted: boolean): Promise<ActionResult> {
+  const { userId } = await auth();
+  if (!userId) return { ok: false, error: "Connectez-vous pour noter une réponse." };
+
+  const parsedCommentId = commentIdSchema.safeParse(commentId);
+  if (!parsedCommentId.success) return { ok: false, error: "Commentaire invalide." };
+
+  const supabase = getSupabaseServerClient();
+
+  if (voted) {
+    const { data: comment } = await supabase
+      .from("community_comments")
+      .select("author_id")
+      .eq("id", commentId)
+      .maybeSingle();
+    if (comment?.author_id === userId) {
+      return { ok: false, error: "Vous ne pouvez pas noter votre propre réponse." };
+    }
+
+    const { error } = await supabase
+      .from("community_comment_votes")
+      .insert({ comment_id: commentId, author_id: userId });
+    if (error && error.code !== "23505") {
+      return { ok: false, error: "Une erreur est survenue." };
+    }
+  } else {
+    await supabase
+      .from("community_comment_votes")
+      .delete()
+      .eq("comment_id", commentId)
       .eq("author_id", userId);
   }
   return { ok: true, posts: await getPosts() };

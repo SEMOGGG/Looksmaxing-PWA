@@ -211,6 +211,24 @@ export function TrophyIcon(props: IconProps) {
   );
 }
 
+export function CrownIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M4 17.5h16l-1.3-8-4 3.2L12 6l-2.7 6.7-4-3.2L4 17.5Z" />
+      <path d="M4 20h16" />
+    </svg>
+  );
+}
+
+export function ThumbsUpIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M7 11v9H4.5A1.5 1.5 0 0 1 3 18.5v-6A1.5 1.5 0 0 1 4.5 11H7Z" />
+      <path d="M7 11l3.5-7c1.4 0 2.5 1.1 2.5 2.5V9h5a2 2 0 0 1 2 2.4l-1.3 6.5A2 2 0 0 1 17 19.5H9.5A2.5 2.5 0 0 1 7 17V11Z" />
+    </svg>
+  );
+}
+
 export function HeartIcon(props: IconProps) {
   return (
     <svg {...base} {...props}>

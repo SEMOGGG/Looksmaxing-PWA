@@ -7,9 +7,10 @@ import { AppTopBar } from "@/components/app-top-bar";
 import { ArticleCard } from "@/components/community/article-card";
 import { PostCard } from "@/components/community/post-card";
 import { PostComposer } from "@/components/community/post-composer";
+import { ChadSpotlight, LeaderboardRow } from "@/components/community/reputation-badge";
 import { Reveal } from "@/components/reveal";
 import { LockIcon, ShieldCheckIcon, UsersIcon, MessageIcon, HeartIcon, TrophyIcon } from "@/components/icons";
-import { articles, categoryLabels, type ArticleCategory, type Post } from "@/lib/community";
+import { articles, categoryLabels, CHAD_SLOTS, type ArticleCategory, type Post } from "@/lib/community";
 import type { Plan } from "@/lib/user-data";
 import { getUserData } from "@/app/actions/user-data";
 import {
@@ -17,11 +18,14 @@ import {
   createPost,
   createComment,
   toggleLike,
+  toggleCommentVote,
   reportPost,
   getCommunityStanding,
+  getLeaderboard,
   type CommunityStanding,
   type NewPostMedia,
 } from "./actions";
+import type { LeaderboardEntry } from "@/lib/community";
 
 const categories = Object.keys(categoryLabels) as ArticleCategory[];
 
@@ -34,20 +38,22 @@ const DEFAULT_STANDING: CommunityStanding = {
 
 export default function CommunautePage() {
   const { isSignedIn } = useUser();
-  const [tab, setTab] = useState<"articles" | "discussions">("articles");
+  const [tab, setTab] = useState<"articles" | "discussions" | "classement">("articles");
   const [category, setCategory] = useState<ArticleCategory | "tous">("tous");
   const [sort, setSort] = useState<"recent" | "popular">("recent");
   const [posts, setPosts] = useState<Post[]>([]);
   const [plan, setPlan] = useState<Plan>("free");
   const [standing, setStanding] = useState<CommunityStanding>(DEFAULT_STANDING);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    Promise.all([getUserData(), getPosts(), getCommunityStanding()])
-      .then(([userData, loadedPosts, loadedStanding]) => {
+    Promise.all([getUserData(), getPosts(), getCommunityStanding(), getLeaderboard()])
+      .then(([userData, loadedPosts, loadedStanding, loadedLeaderboard]) => {
         setPlan(userData.plan);
         setPosts(loadedPosts);
         setStanding(loadedStanding);
+        setLeaderboard(loadedLeaderboard);
       })
       .finally(() => setReady(true));
   }, []);
@@ -88,7 +94,19 @@ export default function CommunautePage() {
 
   function handleLike(postId: string, liked: boolean) {
     toggleLike(postId, liked).then((result) => {
-      if (result.ok) setPosts(result.posts);
+      if (result.ok) {
+        setPosts(result.posts);
+        getLeaderboard().then(setLeaderboard);
+      }
+    });
+  }
+
+  function handleCommentVote(commentId: string, voted: boolean) {
+    toggleCommentVote(commentId, voted).then((result) => {
+      if (result.ok) {
+        setPosts(result.posts);
+        getLeaderboard().then(setLeaderboard);
+      }
     });
   }
 
@@ -146,35 +164,46 @@ export default function CommunautePage() {
           >
             Discussions
           </button>
-        </div>
-
-        <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
           <button
             type="button"
-            onClick={() => setCategory("tous")}
-            className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-              category === "tous"
-                ? "border-accent bg-accent-soft text-accent-strong"
-                : "border-border text-muted"
+            onClick={() => setTab("classement")}
+            className={`flex-1 rounded-full py-2 font-medium transition-colors ${
+              tab === "classement" ? "bg-gradient-accent text-white" : "text-muted"
             }`}
           >
-            Tous
+            Classement
           </button>
-          {categories.map((cat) => (
+        </div>
+
+        {tab !== "classement" && (
+          <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
             <button
-              key={cat}
               type="button"
-              onClick={() => setCategory(cat)}
+              onClick={() => setCategory("tous")}
               className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                category === cat
+                category === "tous"
                   ? "border-accent bg-accent-soft text-accent-strong"
                   : "border-border text-muted"
               }`}
             >
-              {categoryLabels[cat]}
+              Tous
             </button>
-          ))}
-        </div>
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setCategory(cat)}
+                className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                  category === cat
+                    ? "border-accent bg-accent-soft text-accent-strong"
+                    : "border-border text-muted"
+                }`}
+              >
+                {categoryLabels[cat]}
+              </button>
+            ))}
+          </div>
+        )}
 
         {tab === "articles" ? (
           <div className="mt-4 flex flex-col gap-3">
@@ -184,7 +213,7 @@ export default function CommunautePage() {
               </Reveal>
             ))}
           </div>
-        ) : (
+        ) : tab === "discussions" ? (
           <div className="mt-4 flex flex-col gap-3">
             <Reveal>
               <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
@@ -307,9 +336,63 @@ export default function CommunautePage() {
                 canParticipate={canParticipate}
                 onLike={handleLike}
                 onComment={handleComment}
+                onCommentVote={handleCommentVote}
                 onReport={handleReport}
               />
             ))}
+          </div>
+        ) : (
+          <div className="mt-4 flex flex-col gap-6">
+            <p className="text-sm leading-relaxed text-muted">
+              1 point par like reçu sur une publication, 1 point par vote « astuce utile » reçu sur
+              un commentaire. Les {CHAD_SLOTS} meilleurs scores décrochent le badge Chad — les places
+              se reprennent si quelqu&rsquo;un d&rsquo;autre passe devant.
+            </p>
+
+            {leaderboard.length === 0 ? (
+              <p className="rounded-2xl border border-dashed border-border bg-surface p-5 text-sm text-muted">
+                Personne n&rsquo;a encore reçu de like ou de vote « utile ». Soyez les premiers à
+                lancer le classement !
+              </p>
+            ) : (
+              <>
+                {leaderboard[0] && leaderboard[0].badge.kind === "chad" && (
+                  <Reveal>
+                    <ChadSpotlight entry={leaderboard[0]} />
+                  </Reveal>
+                )}
+
+                {leaderboard.filter((e) => e.badge.kind === "chad" && e.rank > 1).length > 0 && (
+                  <div>
+                    <h2 className="mb-2.5 text-sm font-semibold tracking-wide text-muted uppercase">
+                      Autres Chads
+                    </h2>
+                    <div className="flex flex-col gap-2.5">
+                      {leaderboard
+                        .filter((e) => e.badge.kind === "chad" && e.rank > 1)
+                        .map((entry) => (
+                          <LeaderboardRow key={entry.authorId} entry={entry} highlight />
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {leaderboard.filter((e) => e.badge.kind !== "chad").length > 0 && (
+                  <div>
+                    <h2 className="mb-2.5 text-sm font-semibold tracking-wide text-muted uppercase">
+                      Classement général
+                    </h2>
+                    <div className="flex flex-col gap-2.5">
+                      {leaderboard
+                        .filter((e) => e.badge.kind !== "chad")
+                        .map((entry) => (
+                          <LeaderboardRow key={entry.authorId} entry={entry} />
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
       </main>

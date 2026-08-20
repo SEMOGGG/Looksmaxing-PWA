@@ -129,6 +129,8 @@ export type Comment = {
   author: string;
   content: string;
   createdAt: string;
+  helpfulCount: number;
+  authorBadge: LeaderboardBadge;
 };
 
 export type Post = {
@@ -141,13 +143,15 @@ export type Post = {
   comments: Comment[];
   mediaUrl: string | null;
   mediaType: "image" | "video" | null;
-  authorTier: ContributionTier;
+  authorBadge: LeaderboardBadge;
 };
 
 // Paliers d'ancienneté/activité dans la Communauté, basés sur le nombre
 // total de publications + commentaires (tous auteurs confondus, calculé à
-// la volée — voir getAuthorTiers dans actions.ts). "Vérifié" est le seuil
-// qui débloque l'envoi de photos/vidéos.
+// la volée — voir getContributionCount dans actions.ts). Sert uniquement à
+// débloquer l'envoi de photos/vidéos (MEDIA_UNLOCK_THRESHOLD) : le badge
+// affiché publiquement sur les publications est le système de réputation
+// par points ci-dessous (Débutant/LTN/MTN/HTN/Chad), pas celui-ci.
 export type ContributionTier = { id: string; label: string; minCount: number };
 
 export const contributionTiers: ContributionTier[] = [
@@ -166,6 +170,54 @@ export function getContributionTier(count: number): ContributionTier {
   }
   return current;
 }
+
+// Système de réputation par points : chaque like reçu sur une publication
+// et chaque vote "utile" reçu sur un commentaire rapporte 1 point à son
+// auteur (voir computeLeaderboard dans actions.ts). Les paliers reprennent
+// le vocabulaire familier des communautés apparence/looksmaxing, avec Chad
+// réservé à un nombre limité de places (CHAD_SLOTS) plutôt qu'à un simple
+// seuil de points — c'est un classement, pas un niveau qu'on débloque seul.
+export type ReputationTier = { id: string; label: string; minPoints: number };
+
+export const reputationTiers: ReputationTier[] = [
+  { id: "debutant", label: "Débutant", minPoints: 0 },
+  { id: "ltn", label: "LTN", minPoints: 3 },
+  { id: "mtn", label: "MTN", minPoints: 10 },
+  { id: "htn", label: "HTN", minPoints: 25 },
+];
+
+// Nombre de places de Chad disponibles, et score plancher pour y prétendre
+// (en plus d'être dans le top CHAD_SLOTS) : évite qu'un compte tout neuf
+// avec 1 point devienne Chad faute de concurrence.
+export const CHAD_SLOTS = 5;
+export const CHAD_MIN_POINTS = 25;
+
+export function getReputationTier(points: number): ReputationTier {
+  let current = reputationTiers[0];
+  for (const tier of reputationTiers) {
+    if (points >= tier.minPoints) current = tier;
+  }
+  return current;
+}
+
+export type LeaderboardBadge =
+  | { kind: "chad"; rank: number }
+  | { kind: "tier"; tier: ReputationTier };
+
+export function computeLeaderboardBadge(points: number, rank: number): LeaderboardBadge {
+  if (rank <= CHAD_SLOTS && points >= CHAD_MIN_POINTS) {
+    return { kind: "chad", rank };
+  }
+  return { kind: "tier", tier: getReputationTier(points) };
+}
+
+export type LeaderboardEntry = {
+  authorId: string;
+  displayName: string;
+  points: number;
+  rank: number;
+  badge: LeaderboardBadge;
+};
 
 // Sujet mis en avant en haut du composeur, qui change chaque semaine (index
 // dérivé de la date, même principe que dailyRoutineTip dans
