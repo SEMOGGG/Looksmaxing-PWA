@@ -57,6 +57,19 @@ create table if not exists community_reports (
 create index if not exists community_posts_status_idx on community_posts (moderation_status, created_at desc);
 create index if not exists community_comments_post_idx on community_comments (post_id, created_at asc);
 
+-- Photo ou courte vidéo jointe à une publication (réservé aux membres à 200
+-- contributions ou plus — voir MEDIA_UNLOCK_THRESHOLD dans lib/community.ts
+-- et le bucket de stockage "community-media" plus bas). Les commentaires
+-- restent volontairement texte seul.
+alter table community_posts add column if not exists media_url text;
+alter table community_posts add column if not exists media_type text check (media_type in ('image', 'video'));
+
+-- Index pour compter rapidement les contributions par auteur (paliers
+-- Nouveau/Actif/Habitué/Vérifié, déblocage photos/vidéos), calculées à la
+-- volée plutôt que via un compteur dénormalisé.
+create index if not exists community_posts_author_idx on community_posts (author_id);
+create index if not exists community_comments_author_idx on community_comments (author_id);
+
 -- Le compteur likes_count est dérivé de community_likes via ce trigger,
 -- plutôt qu'incrémenté manuellement depuis l'application (évite tout
 -- décalage en cas d'écriture concurrente).
@@ -253,3 +266,13 @@ create index if not exists bilans_user_idx on bilans (user_id, created_at desc);
 alter table bilans enable row level security;
 -- Aucune policy pour le rôle "anon" : lu/écrit uniquement par les Server
 -- Actions serveur, après vérification Clerk + statut Premium.
+
+-- Bucket de stockage pour les photos/vidéos envoyées dans la Communauté.
+-- Public en lecture (les fichiers ont un nom aléatoire imprévisible et ne
+-- sont référencés que depuis les publications déjà passées par la
+-- modération IA) ; aucune policy d'écriture pour "anon"/"authenticated" —
+-- l'upload passe uniquement par la Server Action createPost, avec la clé
+-- secrète qui contourne RLS, après modération du contenu.
+insert into storage.buckets (id, name, public)
+values ('community-media', 'community-media', true)
+on conflict (id) do nothing;

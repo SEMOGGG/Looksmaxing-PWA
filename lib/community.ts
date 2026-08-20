@@ -139,7 +139,56 @@ export type Post = {
   createdAt: string;
   likes: number;
   comments: Comment[];
+  mediaUrl: string | null;
+  mediaType: "image" | "video" | null;
+  authorTier: ContributionTier;
 };
+
+// Paliers d'ancienneté/activité dans la Communauté, basés sur le nombre
+// total de publications + commentaires (tous auteurs confondus, calculé à
+// la volée — voir getAuthorTiers dans actions.ts). "Vérifié" est le seuil
+// qui débloque l'envoi de photos/vidéos.
+export type ContributionTier = { id: string; label: string; minCount: number };
+
+export const contributionTiers: ContributionTier[] = [
+  { id: "nouveau", label: "Nouveau", minCount: 0 },
+  { id: "actif", label: "Actif", minCount: 10 },
+  { id: "habitue", label: "Habitué", minCount: 50 },
+  { id: "verifie", label: "Vérifié", minCount: 200 },
+];
+
+export const MEDIA_UNLOCK_THRESHOLD = 200;
+
+export function getContributionTier(count: number): ContributionTier {
+  let current = contributionTiers[0];
+  for (const tier of contributionTiers) {
+    if (count >= tier.minCount) current = tier;
+  }
+  return current;
+}
+
+// Sujet mis en avant en haut du composeur, qui change chaque semaine (index
+// dérivé de la date, même principe que dailyRoutineTip dans
+// lib/routine-tips.ts) pour donner un point de départ facile plutôt qu'une
+// page blanche.
+export type WeeklyTopic = { question: string; category: ArticleCategory };
+
+const weeklyTopics: WeeklyTopic[] = [
+  { question: "Quelle habitude a le plus changé votre apparence cette année ?", category: "general" },
+  { question: "Un produit skincare qui vous a vraiment surpris, en bien ?", category: "apparence" },
+  { question: "Comment organisez-vous vos repas les jours où l'entraînement tombe tard ?", category: "nutrition" },
+  { question: "Un exercice cardio que vous arrivez enfin à tenir dans la durée, sans vous forcer ?", category: "cardio" },
+  { question: "Une pièce ou une coupe qui a changé votre style récemment ?", category: "style" },
+  { question: "Un petit changement qui a eu un effet disproportionné sur votre confiance ?", category: "general" },
+  { question: "Votre routine du soir en 3 étapes, pas plus : à quoi elle ressemble ?", category: "apparence" },
+];
+
+export function currentWeeklyTopic(): WeeklyTopic {
+  const start = Date.UTC(new Date().getUTCFullYear(), 0, 1);
+  const weekIndex = Math.floor((Date.now() - start) / (7 * 86_400_000));
+  const index = ((weekIndex % weeklyTopics.length) + weeklyTopics.length) % weeklyTopics.length;
+  return weeklyTopics[index];
+}
 
 // Publications de démonstration insérées automatiquement dans Supabase la
 // première fois que la table community_posts est vide (voir seedIfEmpty
@@ -211,7 +260,9 @@ export const seedPosts: {
 const BLOCKED_TERMS = ["connard", "salope", "pute", "débile", "abruti", "crève"];
 
 export function moderateContent(text: string): { status: "approved" | "flagged"; reason?: string } {
-  const normalized = text.toLowerCase();
+  const trimmed = text.trim();
+  const normalized = trimmed.toLowerCase();
+
   const hit = BLOCKED_TERMS.find((term) => normalized.includes(term));
   if (hit) {
     return {
@@ -220,8 +271,29 @@ export function moderateContent(text: string): { status: "approved" | "flagged";
         "Ce message contient des propos qui ne respectent pas nos règles de bienveillance. Merci de le reformuler.",
     };
   }
-  if (text.trim().length < 3) {
+  if (trimmed.length < 3) {
     return { status: "flagged", reason: "Votre message est trop court." };
   }
+
+  // Anti-spam : liens en rafale, caractères répétés (ex. "!!!!!!!!!!" ou
+  // "aaaaaaaa"), messages tout en majuscules — des signaux simples mais
+  // qui couvrent l'essentiel du spam automatisé sans modèle dédié.
+  const linkCount = (trimmed.match(/https?:\/\//gi) ?? []).length;
+  if (linkCount > 2) {
+    return { status: "flagged", reason: "Trop de liens dans ce message." };
+  }
+
+  if (/(.)\1{6,}/.test(trimmed)) {
+    return { status: "flagged", reason: "Ce message ressemble à du spam (caractères répétés)." };
+  }
+
+  const letters = trimmed.replace(/[^a-zA-ZÀ-ÖØ-öø-ÿ]/g, "");
+  if (letters.length > 15) {
+    const upper = letters.replace(/[^A-ZÀ-Ö]/g, "");
+    if (upper.length / letters.length > 0.8) {
+      return { status: "flagged", reason: "Merci d'éviter les messages tout en majuscules." };
+    }
+  }
+
   return { status: "approved" };
 }

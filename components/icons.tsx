@@ -174,6 +174,43 @@ export function SearchIcon(props: IconProps) {
   );
 }
 
+export function ImageIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
+      <circle cx="9" cy="10" r="1.8" />
+      <path d="m4.5 17.5 5-5.5 3.5 3.5 2.5-3 4 5" />
+    </svg>
+  );
+}
+
+export function FilmIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="3.5" y="5.5" width="17" height="13" rx="2" />
+      <path d="M10 8.2v7.6l6-3.8-6-3.8Z" />
+    </svg>
+  );
+}
+
+export function XIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M6 6l12 12M18 6 6 18" />
+    </svg>
+  );
+}
+
+export function TrophyIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M7 4h10v4a5 5 0 0 1-5 5 5 5 0 0 1-5-5V4Z" />
+      <path d="M7 5H4a3 3 0 0 0 3 5M17 5h3a3 3 0 0 1-3 5" />
+      <path d="M12 13v3.5M9 20h6M9.5 20c0-1.8.8-2.8 2.5-2.8s2.5 1 2.5 2.8" />
+    </svg>
+  );
+}
+
 export function HeartIcon(props: IconProps) {
   return (
     <svg {...base} {...props}>

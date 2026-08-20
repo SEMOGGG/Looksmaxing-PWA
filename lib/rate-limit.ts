@@ -20,6 +20,9 @@ const limiters = {
   coachMessage: redis ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(10, "60 s") }) : null,
   // Publications/commentaires Communauté.
   communityWrite: redis ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(10, "60 s") }) : null,
+  // Photos/vidéos Communauté : plus coûteux (stockage + modération IA) que
+  // le texte, donc plafond nettement plus bas que communityWrite.
+  communityMedia: redis ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(5, "600 s") }) : null,
   // Analyses par photo (corps/peau) : le vrai plafond est le budget
   // mensuel partagé (lib/ai-usage.ts), pas ce compteur — ceci absorbe
   // juste une rafale de requêtes rapprochées.

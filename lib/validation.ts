@@ -38,6 +38,27 @@ export const articleCategorySchema = z.enum(["apparence", "nutrition", "cardio",
 export const postContentSchema = z.string().trim().min(1).max(2000);
 export const commentContentSchema = z.string().trim().min(1).max(1000);
 
+const MAX_MEDIA_BYTES = 16 * 1024 * 1024; // 16 Mo décodés (photo ou vidéo)
+
+// Photo ou courte vidéo jointe à une publication Communauté (réservé aux
+// membres à 200 contributions ou plus, voir MEDIA_UNLOCK_THRESHOLD).
+export const communityMediaSchema = z
+  .string()
+  .regex(
+    /^data:(image\/(png|jpe?g|webp|gif)|video\/(mp4|webm|quicktime));base64,[A-Za-z0-9+/]+=*$/,
+    "Format de média invalide"
+  )
+  .refine((value) => {
+    const base64 = value.slice(value.indexOf(",") + 1);
+    const approxBytes = (base64.length * 3) / 4;
+    return approxBytes <= MAX_MEDIA_BYTES;
+  }, "Fichier trop volumineux (16 Mo maximum)");
+
+// Image fixe extraite côté client d'une vidéo (jusqu'à 3 frames), envoyée en
+// plus de la vidéo pour que la modération IA (image uniquement) puisse
+// l'analyser.
+export const moderationFrameSchema = z.string().regex(/^data:image\/jpeg;base64,[A-Za-z0-9+/]+=*$/, "Aperçu invalide");
+
 export const weightKgSchema = z.number().positive().max(400);
 
 export const coachMessageSchema = z.string().trim().min(1).max(2000);

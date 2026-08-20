@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { categoryLabels, moderateContent, type Post } from "@/lib/community";
 import { formatRelativeTime } from "@/lib/format-time";
-import { FlagIcon, HeartIcon, MessageIcon } from "@/components/icons";
+import { FlagIcon, HeartIcon, MessageIcon, ShieldCheckIcon } from "@/components/icons";
 
 export function PostCard({
   post,
@@ -61,7 +61,19 @@ export function PostCard({
             {post.author.charAt(0).toUpperCase()}
           </span>
           <div>
-            <p className="text-sm font-semibold text-foreground">{post.author}</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-semibold text-foreground">{post.author}</p>
+              {post.authorTier.id === "verifie" ? (
+                <span className="flex items-center gap-0.5 rounded-full bg-accent-soft px-1.5 py-0.5 text-[10px] font-semibold text-accent-strong">
+                  <ShieldCheckIcon className="h-2.5 w-2.5" />
+                  Vérifié
+                </span>
+              ) : post.authorTier.id !== "nouveau" ? (
+                <span className="rounded-full bg-surface-muted px-1.5 py-0.5 text-[10px] font-medium text-muted">
+                  {post.authorTier.label}
+                </span>
+              ) : null}
+            </div>
             <p className="text-xs text-muted">
               {formatRelativeTime(post.createdAt)} · {categoryLabels[post.category]}
             </p>
@@ -79,6 +91,17 @@ export function PostCard({
       </div>
 
       <p className="mt-3 text-sm leading-relaxed text-foreground">{post.content}</p>
+
+      {post.mediaUrl && (
+        <div className="mt-3 overflow-hidden rounded-xl border border-border">
+          {post.mediaType === "video" ? (
+            <video src={post.mediaUrl} controls className="max-h-96 w-full bg-black" />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={post.mediaUrl} alt="" className="max-h-96 w-full object-cover" />
+          )}
+        </div>
+      )}
 
       <div className="mt-4 flex items-center gap-4 text-sm text-muted">
         <button

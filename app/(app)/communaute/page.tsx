@@ -1,36 +1,63 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useUser, SignInButton, UserButton } from "@clerk/nextjs";
 import { AppTopBar } from "@/components/app-top-bar";
 import { ArticleCard } from "@/components/community/article-card";
 import { PostCard } from "@/components/community/post-card";
 import { PostComposer } from "@/components/community/post-composer";
-import { LockIcon, ShieldCheckIcon } from "@/components/icons";
+import { Reveal } from "@/components/reveal";
+import { LockIcon, ShieldCheckIcon, UsersIcon, MessageIcon, HeartIcon, TrophyIcon } from "@/components/icons";
 import { articles, categoryLabels, type ArticleCategory, type Post } from "@/lib/community";
 import type { Plan } from "@/lib/user-data";
 import { getUserData } from "@/app/actions/user-data";
-import { getPosts, createPost, createComment, toggleLike, reportPost } from "./actions";
+import {
+  getPosts,
+  createPost,
+  createComment,
+  toggleLike,
+  reportPost,
+  getCommunityStanding,
+  type CommunityStanding,
+  type NewPostMedia,
+} from "./actions";
 
 const categories = Object.keys(categoryLabels) as ArticleCategory[];
+
+const DEFAULT_STANDING: CommunityStanding = {
+  contributionCount: 0,
+  tier: { id: "nouveau", label: "Nouveau", minCount: 0 },
+  canUploadMedia: false,
+  remainingForMedia: 200,
+};
 
 export default function CommunautePage() {
   const { isSignedIn } = useUser();
   const [tab, setTab] = useState<"articles" | "discussions">("articles");
   const [category, setCategory] = useState<ArticleCategory | "tous">("tous");
+  const [sort, setSort] = useState<"recent" | "popular">("recent");
   const [posts, setPosts] = useState<Post[]>([]);
   const [plan, setPlan] = useState<Plan>("free");
+  const [standing, setStanding] = useState<CommunityStanding>(DEFAULT_STANDING);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    Promise.all([getUserData(), getPosts()])
-      .then(([userData, loadedPosts]) => {
+    Promise.all([getUserData(), getPosts(), getCommunityStanding()])
+      .then(([userData, loadedPosts, loadedStanding]) => {
         setPlan(userData.plan);
         setPosts(loadedPosts);
+        setStanding(loadedStanding);
       })
       .finally(() => setReady(true));
   }, []);
+
+  const stats = useMemo(() => {
+    const totalComments = posts.reduce((sum, p) => sum + p.comments.length, 0);
+    const totalLikes = posts.reduce((sum, p) => sum + p.likes, 0);
+    const distinctAuthors = new Set(posts.map((p) => p.author)).size;
+    return { totalPosts: posts.length, totalComments, totalLikes, distinctAuthors };
+  }, [posts]);
 
   if (!ready) return null;
 
@@ -38,13 +65,16 @@ export default function CommunautePage() {
   const canParticipate = isPremium && Boolean(isSignedIn);
   const filteredArticles =
     category === "tous" ? articles : articles.filter((a) => a.category === category);
-  const filteredPosts =
-    category === "tous" ? posts : posts.filter((p) => p.category === category);
+  const filteredPosts = (
+    category === "tous" ? posts : posts.filter((p) => p.category === category)
+  ).slice();
+  if (sort === "popular") filteredPosts.sort((a, b) => b.likes - a.likes);
 
-  async function handleNewPost(content: string, postCategory: ArticleCategory) {
-    const result = await createPost(content, postCategory);
+  async function handleNewPost(content: string, postCategory: ArticleCategory, media?: NewPostMedia) {
+    const result = await createPost(content, postCategory, media);
     if (!result.ok) return result.error;
     setPosts(result.posts);
+    getCommunityStanding().then(setStanding);
     return null;
   }
 
@@ -52,6 +82,7 @@ export default function CommunautePage() {
     const result = await createComment(postId, content);
     if (!result.ok) return result.error;
     setPosts(result.posts);
+    getCommunityStanding().then(setStanding);
     return null;
   }
 
@@ -74,7 +105,28 @@ export default function CommunautePage() {
         end={isSignedIn ? <UserButton /> : undefined}
       />
       <main className="mx-auto w-full max-w-5xl flex-1 px-5 py-6">
-        <div className="flex gap-2 rounded-full border border-border bg-surface p-1 text-sm">
+        <Reveal>
+          <div className="relative -mx-5 h-36 overflow-hidden sm:mx-0 sm:h-48 sm:rounded-3xl">
+            {/* Image libre de droits (Picsum), teintée pour coller à la DA sombre/violette du reste de l'app. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="https://picsum.photos/seed/faciem-communaute/1200/500?grayscale"
+              alt=""
+              className="h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-accent/30" />
+            <div className="absolute inset-0 flex flex-col justify-end p-5">
+              <p className="font-heading text-lg font-semibold text-white sm:text-xl">
+                Progressez ensemble, sans jugement.
+              </p>
+              <p className="mt-1 text-xs text-white/80 sm:text-sm">
+                Conseils, questions, avancées — un espace sérieux et bienveillant.
+              </p>
+            </div>
+          </div>
+        </Reveal>
+
+        <div className="mt-5 flex gap-2 rounded-full border border-border bg-surface p-1 text-sm">
           <button
             type="button"
             onClick={() => setTab("articles")}
@@ -125,25 +177,67 @@ export default function CommunautePage() {
 
         {tab === "articles" ? (
           <div className="mt-4 flex flex-col gap-3">
-            {filteredArticles.map((article) => (
-              <ArticleCard key={article.id} article={article} />
+            {filteredArticles.map((article, i) => (
+              <Reveal key={article.id} delay={Math.min(i, 4) * 60}>
+                <ArticleCard article={article} />
+              </Reveal>
             ))}
           </div>
         ) : (
           <div className="mt-4 flex flex-col gap-3">
+            <Reveal>
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+                <div className="flex items-center gap-2 rounded-xl border border-border bg-surface p-3">
+                  <UsersIcon className="h-4 w-4 shrink-0 text-accent-strong" />
+                  <div>
+                    <p className="font-heading text-base font-semibold text-foreground">
+                      {stats.distinctAuthors}
+                    </p>
+                    <p className="text-[11px] text-muted">Membres actifs</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 rounded-xl border border-border bg-surface p-3">
+                  <MessageIcon className="h-4 w-4 shrink-0 text-accent-strong" />
+                  <div>
+                    <p className="font-heading text-base font-semibold text-foreground">
+                      {stats.totalPosts + stats.totalComments}
+                    </p>
+                    <p className="text-[11px] text-muted">Messages</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 rounded-xl border border-border bg-surface p-3">
+                  <HeartIcon className="h-4 w-4 shrink-0 text-accent-strong" />
+                  <div>
+                    <p className="font-heading text-base font-semibold text-foreground">{stats.totalLikes}</p>
+                    <p className="text-[11px] text-muted">Likes donnés</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 rounded-xl border border-border bg-surface p-3">
+                  <TrophyIcon className="h-4 w-4 shrink-0 text-accent-strong" />
+                  <div>
+                    <p className="font-heading text-base font-semibold text-foreground">
+                      {standing.contributionCount}
+                    </p>
+                    <p className="text-[11px] text-muted">Vos contributions</p>
+                  </div>
+                </div>
+              </div>
+            </Reveal>
+
             <div className="flex items-start gap-2.5 rounded-xl border border-border bg-surface-muted px-4 py-3 text-xs leading-relaxed text-muted">
               <ShieldCheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
               <p>
                 Espace bienveillant : on s&rsquo;encourage, on ne juge pas. Les messages sont
-                vérifiés par notre modération avant publication ; ce n&rsquo;est pas un
-                espace de conseil médical — pour toute question de santé, consultez un
-                professionnel.
+                vérifiés par notre modération avant publication, et les photos/vidéos sont
+                analysées automatiquement (aucun contenu à caractère sexuel ou choquant) ; ce
+                n&rsquo;est pas un espace de conseil médical — pour toute question de santé,
+                consultez un professionnel.
               </p>
             </div>
 
             {isPremium ? (
               isSignedIn ? (
-                <PostComposer onSubmit={handleNewPost} />
+                <PostComposer standing={standing} onSubmit={handleNewPost} />
               ) : (
                 <div className="flex items-center gap-3 rounded-2xl border border-dashed border-border bg-surface p-5">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-muted text-muted">
@@ -179,6 +273,29 @@ export default function CommunautePage() {
                     Débloquer
                   </Link>
                 </p>
+              </div>
+            )}
+
+            {filteredPosts.length > 0 && (
+              <div className="mt-1 flex items-center justify-end gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setSort("recent")}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                    sort === "recent" ? "bg-accent-soft text-accent-strong" : "text-muted hover:text-foreground"
+                  }`}
+                >
+                  Récents
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSort("popular")}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                    sort === "popular" ? "bg-accent-soft text-accent-strong" : "text-muted hover:text-foreground"
+                  }`}
+                >
+                  Populaires
+                </button>
               </div>
             )}
 
