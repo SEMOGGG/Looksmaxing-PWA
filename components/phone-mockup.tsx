@@ -1,4 +1,5 @@
 import Image from "next/image";
+import type { CSSProperties } from "react";
 
 // Cadre de téléphone stylisé pour présenter de vraies captures d'écran de
 // l'app sur la page d'accueil — nos captures ne sont pas au format 9:19.5
@@ -18,8 +19,8 @@ export function PhoneMockup({
 }) {
   return (
     <div
-      className={`relative aspect-[9/18.5] w-full rounded-[2.2rem] border-[6px] border-[#242230] bg-[#050409] p-1.5 shadow-2xl ${className}`}
-      style={tilt ? { transform: `rotate(${tilt}deg)` } : undefined}
+      className={`phone-mockup relative aspect-[9/18.5] w-full rounded-[2.2rem] border-[6px] border-[#242230] bg-[#050409] p-1.5 shadow-2xl ${className}`}
+      style={tilt ? ({ "--tilt": `${tilt}deg` } as CSSProperties) : undefined}
     >
       <div className="relative h-full w-full overflow-hidden rounded-[1.6rem] bg-background">
         <Image src={src} alt={alt} fill sizes="220px" className="object-contain object-top" />

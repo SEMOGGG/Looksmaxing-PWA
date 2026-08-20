@@ -95,3 +95,22 @@ h3,
     animation: none;
   }
 }
+
+.phone-mockup {
+  transform: rotate(var(--tilt, 0deg));
+  transition: transform 300ms ease;
+}
+
+.phone-mockup:hover {
+  transform: rotate(var(--tilt, 0deg)) translateY(-10px) scale(1.03);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phone-mockup {
+    transition: none;
+  }
+
+  .phone-mockup:hover {
+    transform: rotate(var(--tilt, 0deg));
+  }
+}
